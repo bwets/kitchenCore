@@ -8,9 +8,14 @@ public sealed record DropTarget(DateOnly Date, string Slot);
 /// <summary>What JavaScript reports when a drag is dropped.</summary>
 public sealed record DropReport
 {
-    public required string FromDate { get; init; }
-    public required string FromSlot { get; init; }
+    public string? FromDate { get; init; }
+    public string? FromSlot { get; init; }
     public int FromIndex { get; init; }
+
+    /// <summary>Set instead of FromDate/FromSlot when an undated request was dragged.</summary>
+    public int? RequestOrdinal { get; init; }
+
+    public string? RequestTitle { get; init; }
     public required string ToDate { get; init; }
     public required string ToSlot { get; init; }
     public bool Copy { get; init; }
@@ -32,6 +37,9 @@ public sealed class DragController(IJSRuntime js) : IAsyncDisposable
     /// <summary>Raised when a drag is dropped on a different cell.</summary>
     public event Func<MenuEntryRef, DropTarget, bool, Task>? Dropped;
 
+    /// <summary>Raised when an undated request is dropped onto a day.</summary>
+    public event Func<int, string, DropTarget, Task>? RequestDropped;
+
     /// <summary>Where the current page's entries are, so a drop can be resolved to one.</summary>
     public Func<DateOnly, string, int, MenuEntryRef?>? Resolve { get; set; }
 
@@ -47,13 +55,24 @@ public sealed class DragController(IJSRuntime js) : IAsyncDisposable
     [JSInvokable]
     public async Task HandleDrop(DropReport report)
     {
+        if (!DateOnly.TryParse(report.ToDate, out var toDate))
+        {
+            return;
+        }
+
+        // A request being scheduled, rather than an entry being moved.
+        if (report.RequestOrdinal is { } ordinal && RequestDropped is not null)
+        {
+            await RequestDropped.Invoke(ordinal, report.RequestTitle ?? string.Empty, new DropTarget(toDate, report.ToSlot));
+            return;
+        }
+
         if (Dropped is null || Resolve is null)
         {
             return;
         }
 
-        if (!DateOnly.TryParse(report.FromDate, out var fromDate) ||
-            !DateOnly.TryParse(report.ToDate, out var toDate))
+        if (!DateOnly.TryParse(report.FromDate, out var fromDate))
         {
             return;
         }

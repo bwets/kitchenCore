@@ -124,6 +124,45 @@ public sealed class MenuClient(HttpClient http)
             : new ShiftPreview();
     }
 
+    public async Task<IReadOnlyList<MenuRequest>> RequestsAsync(CancellationToken cancellationToken = default) =>
+        await http.GetFromJsonAsync<List<MenuRequest>>("api/menu/requests", cancellationToken) ?? [];
+
+    public async Task<bool> AddRequestAsync(string title, string? notes, CancellationToken cancellationToken = default)
+    {
+        var response = await http.PostAsJsonAsync("api/menu/requests", new { title, notes }, cancellationToken);
+        return response.IsSuccessStatusCode;
+    }
+
+    /// <summary>
+    /// Turns an undated request into a real entry. The title travels with the
+    /// ordinal because the file has no ids: if somebody scheduled another request
+    /// first, everything after it shifted up.
+    /// </summary>
+    public async Task<bool> ScheduleRequestAsync(
+        MenuRequest request,
+        DateOnly date,
+        string slot,
+        CancellationToken cancellationToken = default)
+    {
+        var response = await http.PostAsJsonAsync("api/menu/requests/schedule", new
+        {
+            ordinal = request.Ordinal,
+            title = request.Title,
+            date = Iso(date),
+            slot,
+        }, cancellationToken);
+
+        return response.IsSuccessStatusCode;
+    }
+
+    public async Task<bool> DropRequestAsync(MenuRequest request, CancellationToken cancellationToken = default)
+    {
+        var url = $"api/menu/requests/{request.Ordinal}?title={Uri.EscapeDataString(request.Title)}";
+        var response = await http.DeleteAsync(url, cancellationToken);
+
+        return response.IsSuccessStatusCode;
+    }
+
     private static object Body(MenuEntryRef from, DropTarget to, bool copy, DropMode? mode) => new
     {
         from = new

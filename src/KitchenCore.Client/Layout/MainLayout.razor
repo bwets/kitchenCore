@@ -1,4 +1,7 @@
 @inherits LayoutComponentBase
+@implements IDisposable
+@inject AuthService Auth
+@inject NavigationManager Nav
 @inject IStringLocalizer<Strings> L
 
 <header class="app-header">
@@ -10,10 +13,18 @@
     </span>
 
     <nav class="app-header__nav">
+        @if (Auth.Identity.Approved)
+        {
         <NavLink class="nav-link" href="" Match="NavLinkMatch.All">@L["Nav_Home"]</NavLink>
         <NavLink class="nav-link" href="menu/week">@L["Nav_Week"]</NavLink>
         <NavLink class="nav-link" href="menu/multi-week">@L["Nav_MultiWeek"]</NavLink>
         <NavLink class="nav-link" href="menu/list">@L["Nav_List"]</NavLink>
+
+        @if (Auth.Identity.Admin)
+        {
+            <NavLink class="nav-link" href="admin">@L["Nav_Admin"]</NavLink>
+        }
+        }
     </nav>
 
     <span class="app-header__spacer"></span>
@@ -26,9 +37,36 @@
 </header>
 
 <main class="app-main">
-    @Body
+    @if (Auth.Identity.Approved || IsAccessPage)
+    {
+        @Body
+    }
+    else
+    {
+        @* Every view calls an API that needs at least a viewer role, so an
+           unapproved device would otherwise land on a page of failed requests
+           and an empty grid. Send it where it can actually do something. *@
+        <div class="panel panel--narrow">
+            <h1>@L["Access_Title"]</h1>
+            <p class="muted">@L["Access_Intro"]</p>
+            <a class="button button--primary" href="access">@L["Access_Submit"]</a>
+        </div>
+    }
 </main>
 
 @* Fluent's providers back the dialog, toast and tooltip services. The entry
    dialog and the drop-choice dialog in later sessions depend on these. *@
 <FluentProviders />
+
+@code {
+    private bool IsAccessPage =>
+        Nav.ToBaseRelativePath(Nav.Uri).TrimEnd('/').StartsWith("access", StringComparison.OrdinalIgnoreCase);
+
+    protected override void OnInitialized()
+    {
+        Auth.Changed += StateHasChanged;
+        Nav.LocationChanged += (_, _) => StateHasChanged();
+    }
+
+    public void Dispose() => Auth.Changed -= StateHasChanged;
+}

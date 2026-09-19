@@ -26,6 +26,14 @@ public static class KitchenCoreServiceCollectionExtensions
         services.AddSingleton<AppConfigLoader>();
         services.AddSingleton<GitCommandRunner>();
         services.AddSingleton<GitRepositoryDetector>();
+
+        // Registered unconditionally, but inert unless the data folder turns out
+        // to be a repository -- the service checks at startup and stops. That
+        // keeps "is git on?" a runtime question about the folder rather than a
+        // wiring decision made before the folder has been looked at.
+        services.AddSingleton<GitSyncService>();
+        services.AddHostedService(sp => sp.GetRequiredService<GitSyncService>());
+        services.AddSingleton<RequestStore>();
         services.AddSingleton<MenuStore>();
         services.AddSingleton<DeviceStore>();
 

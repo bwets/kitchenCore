@@ -43,6 +43,18 @@ public sealed record GitStatus
         new() { Enabled = false, Reason = reason };
 }
 
+/// <summary>How the git sync is doing, for the header badge.</summary>
+public sealed record SyncSummary
+{
+    /// <summary>Edits committed but not yet pushed, or waiting on the debounce.</summary>
+    public int Pending { get; init; }
+
+    public DateTimeOffset? LastSync { get; init; }
+
+    /// <summary>Set when sync has stopped and needs a person to sort it out.</summary>
+    public string? Conflict { get; init; }
+}
+
 /// <summary>Response for GET /api/system/status.</summary>
 public sealed record SystemStatus
 {
@@ -56,4 +68,6 @@ public sealed record SystemStatus
 
     /// <summary>Resolved data root. Shown in diagnostics so it is obvious which fixture is live.</summary>
     public string? DataPath { get; init; }
+
+    public SyncSummary? Sync { get; init; }
 }

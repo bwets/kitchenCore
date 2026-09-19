@@ -372,3 +372,82 @@
     justify-content: flex-end;
   }
 }
+
+// The week grid and the request rail side by side. The rail drops below the grid
+// on a narrow screen rather than squeezing the days.
+.week-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 14rem;
+  gap: $space-4;
+  align-items: start;
+
+  @media (max-width: $bp-wide) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.rail {
+  padding: $space-3;
+  background: var(--surface-container-lowest);
+  border: 1px solid var(--outline-variant);
+  border-radius: $radius-lg;
+
+  &__head {
+    display: flex;
+    align-items: center;
+    gap: $space-2;
+    margin-bottom: $space-2;
+  }
+
+  &__title {
+    margin: 0;
+    font-size: 0.85rem;
+  }
+
+  &__count {
+    margin-left: auto;
+    padding: 0 $space-2;
+    border-radius: $radius-full;
+    background: var(--tertiary-container);
+    color: var(--on-tertiary-container);
+    font-size: 0.7rem;
+    font-weight: 700;
+  }
+
+  &__empty {
+    margin: 0 0 $space-2;
+    color: var(--on-surface-variant);
+    font-size: 0.8rem;
+  }
+
+  &__list {
+    margin: 0 0 $space-3;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    gap: $space-2;
+  }
+
+  &__item {
+    padding: $space-2;
+    border: 1px dashed var(--outline);
+    border-radius: $radius-sm;
+    background: var(--surface-container);
+    font-size: 0.85rem;
+    cursor: grab;
+  }
+
+  &__item-title { display: block; }
+
+  &__item-by {
+    display: block;
+    margin-top: 2px;
+    color: var(--on-surface-variant);
+    font-size: 0.7rem;
+  }
+
+  &__add {
+    display: grid;
+    gap: $space-2;
+  }
+}

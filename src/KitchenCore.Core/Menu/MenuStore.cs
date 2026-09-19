@@ -37,7 +37,7 @@ public sealed record MenuWriteResult
 /// editor can both change these files underneath us, and re-reading a handful of
 /// small YAML files is cheap next to the cost of serving stale data.
 /// </summary>
-public sealed class MenuStore(KitchenPaths paths, AppConfigLoader config)
+public sealed class MenuStore(KitchenPaths paths, AppConfigLoader config, RequestStore requests)
 {
     private static readonly Dictionary<string, SemaphoreSlim> Locks = [];
     private static readonly Lock LocksGate = new();
@@ -91,6 +91,7 @@ public sealed class MenuStore(KitchenPaths paths, AppConfigLoader config)
             From = from,
             To = to,
             Days = days,
+            Requests = requests.List(),
             Issues = index.Issues,
             Version = index.Version,
         };

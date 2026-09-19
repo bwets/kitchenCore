@@ -16,6 +16,7 @@ public static class SystemEndpoints
         app.MapGet("/api/system/status", async (
             AppConfigLoader configLoader,
             GitRepositoryDetector detector,
+            GitSyncService sync,
             KitchenPaths paths,
             CancellationToken cancellationToken) =>
         {
@@ -29,6 +30,12 @@ public static class SystemEndpoints
                 DefaultCulture = config.Locale.Default,
                 AvailableCultures = config.Locale.Available,
                 DataPath = paths.DataRoot,
+                Sync = new SyncSummary
+                {
+                    Pending = sync.State.Pending,
+                    LastSync = sync.State.LastSync,
+                    Conflict = sync.State.Conflict,
+                },
             });
         });
 

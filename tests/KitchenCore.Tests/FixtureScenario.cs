@@ -19,7 +19,8 @@ public sealed class FixtureScenario : IDisposable
         Name = name;
         Paths = new KitchenPaths(Path.Combine(root, "data"), Path.Combine(root, "config"));
         Config = new AppConfigLoader(Paths);
-        Store = new MenuStore(Paths, Config);
+        Requests = new RequestStore(Paths);
+        Store = new MenuStore(Paths, Config, Requests);
     }
 
     public string Root { get; }
@@ -29,6 +30,8 @@ public sealed class FixtureScenario : IDisposable
     public KitchenPaths Paths { get; }
 
     public AppConfigLoader Config { get; }
+
+    public RequestStore Requests { get; }
 
     public MenuStore Store { get; }
 

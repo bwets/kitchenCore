@@ -43,6 +43,12 @@ sequence, addressed by ordinal and guarded by title.
 
 ## Running it
 
+```
+./scripts/dev.ps1 <scenario>        # stop any server, build, run
+./scripts/reset-fixtures.ps1        # put fixtures/ back
+./scripts/init-git-fixture.ps1      # build the 'git' scenario's repo + remote
+```
+
 Every scenario under `fixtures/` has a launch profile that points the app at it:
 
 ```
@@ -55,8 +61,15 @@ are the container paths `/app/data` and `/app/config`. Adding a scenario is a
 folder plus a profile entry, no code.
 
 Fixture folders are written to on purpose -- `git diff fixtures/` shows exactly
-what the app wrote, `git checkout -- fixtures/` resets. Tests copy to a temp
-directory instead, so `dotnet test` never dirties the working tree.
+what the app wrote. Reset with `./scripts/reset-fixtures.ps1`, **not** plain
+`git checkout`: the app creates files that were never committed (config/devices.yaml
+as soon as a device asks for access, requests.yaml as soon as someone asks for a
+meal), and a checkout leaves those behind, where they turn up in the next test
+run as inexplicable failures. The script does checkout *and* clean.
+
+Tests copy a scenario to a temp directory, so `dotnet test` never dirties the
+working tree -- and they identify their own data rather than assuming a scenario
+is pristine, for the same reason.
 
 ## Architecture decisions
 

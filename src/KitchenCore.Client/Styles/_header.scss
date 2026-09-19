@@ -254,3 +254,26 @@
     }
   }
 }
+
+// Sync indicators on the git badge.
+.git-badge__pending,
+.git-badge__alert {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.15rem;
+  height: 1.15rem;
+  padding: 0 4px;
+  border-radius: $radius-full;
+  font-size: 0.65rem;
+  font-weight: 700;
+}
+
+.git-badge__pending {
+  background: var(--tertiary-container);
+  color: var(--on-tertiary-container);
+}
+
+.git-badge__alert {
+  background: var(--error);
+  color: var(--on-error);
+}

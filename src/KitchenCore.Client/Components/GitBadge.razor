@@ -34,16 +34,20 @@ else
 
 @code {
     private GitStatus? _git;
+    private SyncSummary? _sync;
 
     protected override async Task OnInitializedAsync()
     {
         Status.Changed += OnChanged;
-        _git = (await Status.GetAsync()).Git;
+        var status = await Status.GetAsync();
+        _git = status.Git;
+        _sync = status.Sync;
     }
 
     private void OnChanged()
     {
         _git = Status.Current?.Git;
+        _sync = Status.Current?.Sync;
         StateHasChanged();
     }
 

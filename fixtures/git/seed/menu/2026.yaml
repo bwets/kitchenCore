@@ -1,0 +1,13 @@
+# Seed content for the 'git' scenario. scripts/init-git-fixture.ps1 copies this
+# into a generated data/ folder that is a real repository -- which is what git
+# detection keys on, and why the folder itself cannot be committed here.
+year: 2026
+days:
+  2026-09-21:
+    lunch:
+      title: Croque-monsieur
+    dinner:
+      title: Soupe potiron
+  2026-09-22:
+    dinner:
+      title: Chili sin carne

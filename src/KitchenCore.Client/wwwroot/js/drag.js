@@ -55,7 +55,10 @@ function onPointerDown(event) {
         return;
     }
 
-    const handle = event.target.closest('[data-drag-date]');
+    // Two kinds of drag source: an entry in the grid, and an undated request
+    // from the rail. A request has no date of its own, which is the whole reason
+    // it is in the rail rather than on a day.
+    const handle = event.target.closest('[data-drag-date], [data-drag-request]');
 
     if (!handle) {
         return;
@@ -70,9 +73,12 @@ function onPointerDown(event) {
         dragging: false,
         timer: null,
         source: {
-            date: handle.dataset.dragDate,
-            slot: handle.dataset.dragSlot,
+            date: handle.dataset.dragDate ?? null,
+            slot: handle.dataset.dragSlot ?? null,
             index: parseInt(handle.dataset.dragIndex || '0', 10),
+            requestOrdinal: handle.dataset.dragRequest !== undefined
+                ? parseInt(handle.dataset.dragRequest, 10)
+                : null,
             title: handle.dataset.dragTitle || '',
         },
     };
@@ -151,7 +157,9 @@ function onPointerUp(event) {
 
     // Dropping an entry back where it started is a no-op, not a question. It is
     // what a slightly imprecise drag looks like, and asking about it is noise.
-    if (target.date === was.source.date && target.slot === was.source.slot) {
+    if (was.source.requestOrdinal === null &&
+        target.date === was.source.date &&
+        target.slot === was.source.slot) {
         return;
     }
 
@@ -159,6 +167,8 @@ function onPointerUp(event) {
         fromDate: was.source.date,
         fromSlot: was.source.slot,
         fromIndex: was.source.index,
+        requestOrdinal: was.source.requestOrdinal,
+        requestTitle: was.source.title,
         toDate: target.date,
         toSlot: target.slot,
         copy,

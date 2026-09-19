@@ -42,6 +42,7 @@
     </div>
 }
 
+<div class="week-layout">
 <div class="menu-grid-scroll">
     <MenuGrid Days="@(_range?.Days ?? [])"
               Slots="@_slots"
@@ -49,6 +50,11 @@
               OnCreate="OnCreate"
               OnEdit="OnEdit"
               OnMoveMenu="@(e => _moving = e)" />
+</div>
+
+@* Undated requests live beside the grid: they have no day, which is exactly
+   what makes them requests rather than entries. Drag one onto a day to schedule it. *@
+<RequestRail Requests="@(_range?.Requests ?? [])" OnChanged="LoadAsync" />
 </div>
 
 <EntryDialog Target="@_editing"
@@ -82,6 +88,7 @@
         // currently loaded rather than anything carried through JavaScript.
         Drag.Resolve = ResolveEntry;
         Drag.Dropped += OnDroppedAsync;
+        Drag.RequestDropped += OnRequestDroppedAsync;
         await Drag.AttachAsync();
 
         var status = await Status.GetAsync();
@@ -160,9 +167,23 @@
             : null;
     }
 
+    /// <summary>A request dragged onto a day becomes a real entry, still marked as requested.</summary>
+    private async Task OnRequestDroppedAsync(int ordinal, string title, DropTarget to)
+    {
+        var request = _range?.Requests.FirstOrDefault(r => r.Ordinal == ordinal && r.Title == title);
+
+        if (request is not null)
+        {
+            await Menu.ScheduleRequestAsync(request, to.Date, to.Slot);
+            await LoadAsync();
+            StateHasChanged();
+        }
+    }
+
     public async ValueTask DisposeAsync()
     {
         Drag.Dropped -= OnDroppedAsync;
+        Drag.RequestDropped -= OnRequestDroppedAsync;
         await ValueTask.CompletedTask;
     }
 
