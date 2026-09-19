@@ -6,8 +6,11 @@
   z-index: 20;
   display: flex;
   align-items: center;
+  // Wrapping plus min-height (not height) is what lets the nav drop to a second
+  // row on a phone instead of being overlapped by the tools.
+  flex-wrap: wrap;
   gap: $space-3;
-  height: var(--header-height);
+  min-height: var(--header-height);
   padding: 0 $space-4;
   background: var(--surface-container-low);
   border-bottom: 1px solid var(--outline-variant);
@@ -42,6 +45,13 @@
     &::-webkit-scrollbar { display: none; }
   }
 
+  // Source order is brand, nav, spacer, tools. Explicit orders let the same
+  // markup lay out as one row on a desktop and two on a phone.
+  &__brand  { order: 1; }
+  &__nav    { order: 2; }
+  &__spacer { order: 3; }
+  &__tools  { order: 4; }
+
   &__spacer { flex: 1 1 auto; }
 
   &__tools {
@@ -50,9 +60,24 @@
     gap: $space-2;
   }
 
+  // Phone: brand and tools share the top row, the nav takes a full-width second
+  // row of its own. With more views coming (multi-week, list) the nav needs the
+  // whole width to scroll in.
   @media (max-width: $bp-tablet) {
-    padding: 0 $space-3;
+    padding: $space-2 $space-3;
     gap: $space-2;
+    row-gap: $space-2;
+
+    &__nav {
+      order: 5;
+      flex: 1 0 100%;
+      width: 100%;
+    }
+
+    // Pushes the tools hard right on the top row.
+    &__spacer {
+      order: 2;
+    }
   }
 }
 
