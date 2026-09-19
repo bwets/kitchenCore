@@ -1,0 +1,11 @@
+# January to June. Split by hand; the loader globs 2026*.yaml and merges.
+year: 2026
+days:
+  2026-01-05:
+    lunch:
+      title: Soupe aux poireaux
+    dinner:
+      title: Gratin dauphinois
+  2026-06-30:
+    dinner:
+      title: Barbecue

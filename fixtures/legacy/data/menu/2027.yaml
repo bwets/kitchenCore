@@ -1,0 +1,10 @@
+# Right shape, but with a slot that is not in config and some ragged indentation.
+year: 2027
+days:
+  2027-02-01:
+      lunch:
+        title: Croque-monsieur
+      brunch:
+        title: Oeufs benedicte
+      dinner:
+        title:

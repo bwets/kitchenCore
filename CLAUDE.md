@@ -80,6 +80,18 @@ These are settled; don't relitigate them without a reason.
 - **`/app/config` is mounted separately** from `/app/data` and is never git-synced:
   it holds the GitHub token and the device list.
 
+## URLs
+
+```
+/                  -> redirects to /menu/week
+/menu/week         the main view
+/menu/multi-week   drag-and-drop across several weeks
+/menu/list         tree/list grouped by month and week
+/shopping          part 2
+```
+
+Section first, then view. API routes mirror it: `/api/menu/...`, `/api/shopping/...`.
+
 ## Frontend conventions
 
 - Blazor **WebAssembly** + minimal API. Server owns the files; client talks JSON.

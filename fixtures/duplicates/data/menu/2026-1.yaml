@@ -1,0 +1,6 @@
+year: 2026
+days:
+  # Same date as in 2026.yaml. The loader reports this instead of guessing which wins.
+  2026-03-04:
+    dinner:
+      title: Gratin de courgettes

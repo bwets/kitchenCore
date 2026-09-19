@@ -1,0 +1,10 @@
+# July to December. New dates in the second half land here, because it is the
+# highest-numbered shard for the year.
+year: 2026
+days:
+  2026-07-01:
+    lunch:
+      title: Salade nicoise
+  2026-11-04:
+    dinner:
+      title: Pot-au-feu

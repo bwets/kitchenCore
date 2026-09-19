@@ -1,0 +1,12 @@
+# The original sketch's shape: a month name mapping to a list of day-keyed maps.
+# Unsupported, but it must load with an explanation rather than take the app down.
+september:
+- 23:
+    lunch:
+        title: steak / pates / pesto
+        notes: |
+            This is a note for lunch on September 23rd.
+        links:
+          - https://www.example.com
+    dinner:
+        title: xyz

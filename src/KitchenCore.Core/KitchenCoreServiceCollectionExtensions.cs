@@ -1,5 +1,6 @@
 using KitchenCore.Core.Config;
 using KitchenCore.Core.Git;
+using KitchenCore.Core.Menu;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace KitchenCore.Core;
@@ -25,6 +26,7 @@ public static class KitchenCoreServiceCollectionExtensions
         services.AddSingleton<AppConfigLoader>();
         services.AddSingleton<GitCommandRunner>();
         services.AddSingleton<GitRepositoryDetector>();
+        services.AddSingleton<MenuStore>();
 
         return services;
     }

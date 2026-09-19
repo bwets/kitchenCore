@@ -1,0 +1,21 @@
+# Deliberately broken, to exercise the error states.
+year: 2026
+days:
+  # 1. A repeated slot key. Strictly this is invalid YAML, but it is exactly what
+  #    a person editing by hand produces, so the reader has to survive it.
+  2026-03-02:
+    dinner:
+      title: Tartiflette
+    dinner:
+      title: Chili sin carne
+
+  # 2. The sequence form, which is how the writer stores several entries in a slot.
+  2026-03-03:
+    lunch:
+      - title: Quiche
+      - title: Salade
+
+  # 3. This date also appears in 2026-1.yaml -- a date must live in exactly one shard.
+  2026-03-04:
+    dinner:
+      title: Poulet basquaise
