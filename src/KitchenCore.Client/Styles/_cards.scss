@@ -156,3 +156,9 @@
     color: var(--on-error-container);
   }
 }
+
+// Lets the grid reuse the card surface without inheriting its padding.
+.panel--flush {
+  padding: 0;
+  overflow: hidden;
+}

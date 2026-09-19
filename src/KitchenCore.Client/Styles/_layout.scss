@@ -52,3 +52,24 @@
   flex-wrap: wrap;
   gap: $space-2;
 }
+
+
+// Problems found while loading the files. Reported, never thrown: a broken day
+// must not cost you the rest of the week.
+.issues {
+  margin-bottom: $space-4;
+  padding: $space-3 $space-4;
+  border-radius: $radius-md;
+  background: var(--error-container);
+  color: var(--on-error-container);
+  font-size: 0.85rem;
+
+  ul {
+    margin: $space-2 0 0;
+    padding-left: $space-4;
+  }
+
+  li + li {
+    margin-top: $space-1;
+  }
+}

@@ -1,0 +1,149 @@
+@use "tokens" as *;
+
+.dialog-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.dialog {
+  position: fixed;
+  z-index: 41;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(32rem, calc(100vw - #{$space-5}));
+  max-height: calc(100vh - #{$space-6});
+  overflow-y: auto;
+  padding: $space-5;
+  background: var(--surface-container-lowest);
+  border: 1px solid var(--outline-variant);
+  border-radius: $radius-lg;
+  box-shadow: var(--shadow-2);
+
+  &__head {
+    margin-bottom: $space-4;
+  }
+
+  &__title {
+    margin: 0;
+    font-size: 1.05rem;
+  }
+
+  &__subtitle {
+    margin: $space-1 0 0;
+    color: var(--on-surface-variant);
+    font-size: 0.85rem;
+    text-transform: capitalize;
+  }
+
+  &__foot {
+    display: flex;
+    align-items: center;
+    gap: $space-2;
+    margin-top: $space-5;
+  }
+
+  &__spacer {
+    flex: 1 1 auto;
+  }
+
+  &__error {
+    margin: $space-3 0 0;
+    padding: $space-2 $space-3;
+    border-radius: $radius-sm;
+    background: var(--error-container);
+    color: var(--on-error-container);
+    font-size: 0.85rem;
+  }
+
+  // On a phone the dialog becomes a sheet: full width, anchored to the bottom,
+  // so it is reachable with a thumb rather than centred under the keyboard.
+  @media (max-width: $bp-tablet) {
+    top: auto;
+    bottom: 0;
+    left: 0;
+    transform: none;
+    width: 100%;
+    max-height: 85vh;
+    border-radius: $radius-lg $radius-lg 0 0;
+  }
+}
+
+.field {
+  display: block;
+
+  & + & {
+    margin-top: $space-4;
+  }
+
+  &__label {
+    display: block;
+    margin-bottom: $space-1;
+    color: var(--on-surface-variant);
+    font-size: 0.8rem;
+    font-weight: 600;
+  }
+
+  &__input {
+    width: 100%;
+    min-height: 2.75rem;
+    padding: $space-2 $space-3;
+    border: 1px solid var(--outline-variant);
+    border-radius: $radius-sm;
+    background: var(--surface-container-low);
+    color: var(--on-surface);
+    font: inherit;
+    font-size: 0.95rem;
+
+    &:focus-visible {
+      border-color: var(--primary);
+    }
+
+    &--area {
+      resize: vertical;
+      line-height: 1.4;
+    }
+  }
+
+  &__hint {
+    display: block;
+    margin-top: $space-1;
+    color: var(--on-surface-variant);
+    font-size: 0.75rem;
+  }
+}
+
+.button {
+  min-height: 2.75rem;
+  padding: 0 $space-4;
+  border: 1px solid var(--outline-variant);
+  border-radius: $radius-full;
+  background: var(--surface-container-low);
+  color: var(--on-surface);
+  font-size: 0.9rem;
+
+  &:hover:not(:disabled) {
+    background: var(--surface-container-high);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+
+  &--primary {
+    border-color: transparent;
+    background: var(--primary);
+    color: var(--on-primary);
+    font-weight: 600;
+  }
+
+  // Destructive, so it sits apart from save rather than beside it.
+  &--danger {
+    border-color: transparent;
+    background: var(--error-container);
+    color: var(--on-error-container);
+  }
+}

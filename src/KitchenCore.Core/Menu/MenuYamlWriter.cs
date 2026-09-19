@@ -30,7 +30,7 @@ public sealed class MenuYamlWriter(IReadOnlyList<SlotDefinition> slots)
     public string Write(int year, IReadOnlyList<MenuDayRecord> days)
     {
         var output = new StringWriter { NewLine = "\n" };
-        var emitter = new Emitter(output, new EmitterSettings().WithBestIndent(2));
+        var emitter = new Emitter(output, new EmitterSettings().WithBestIndent(2).WithIndentedSequences());
 
         emitter.Emit(new StreamStart());
         emitter.Emit(new DocumentStart(null, null, isImplicit: true));
@@ -103,9 +103,11 @@ public sealed class MenuYamlWriter(IReadOnlyList<SlotDefinition> slots)
             emitter.Emit(Key("notes"));
 
             // Multi-line notes read far better as a literal block than as an
-            // escaped one-liner, and diff line-by-line when edited.
-            var style = entry.Notes.Contains('\n') ? ScalarStyle.Literal : ScalarStyle.Any;
-            emitter.Emit(new Scalar(null, null, Normalize(entry.Notes), style, true, false));
+            // escaped one-liner, and diff line-by-line when edited. A one-liner
+            // stays a plain scalar.
+            var multiline = entry.Notes.Contains('\n') || entry.Notes.Contains('\r');
+            var style = multiline ? ScalarStyle.Literal : ScalarStyle.Any;
+            emitter.Emit(new Scalar(null, null, Normalize(entry.Notes, multiline), style, true, false));
         }
 
         if (entry.Status != EntryStatus.Planned)
@@ -144,10 +146,21 @@ public sealed class MenuYamlWriter(IReadOnlyList<SlotDefinition> slots)
     /// <summary>
     /// A literal block scalar cannot carry CRLF, and trailing blank lines round-trip
     /// badly, so notes are normalised on the way out.
+    ///
+    /// The trailing newline belongs only to the literal form. Adding it to a
+    /// one-line note forces the emitter out of a plain scalar and into a folded
+    /// '>' block -- a lot of ceremony for three words, and it made hand-written
+    /// files look mangled after their first save from the app.
     /// </summary>
-    private static string Normalize(string text)
+    private static string Normalize(string text, bool multiline)
     {
         var normalized = text.Replace("\r\n", "\n").Replace('\r', '\n').TrimEnd();
-        return normalized.Length == 0 ? text.Trim() : normalized + "\n";
+
+        if (normalized.Length == 0)
+        {
+            return text.Trim();
+        }
+
+        return multiline ? normalized + "\n" : normalized;
     }
 }

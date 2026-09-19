@@ -1,12 +1,133 @@
 @page "/menu/week"
+@inject MenuClient Menu
+@inject SystemStatusService Status
+@inject IShoppingSchedule Shopping
 @inject IStringLocalizer<Strings> L
-
-@* Placeholder. The slot-aligned grid is the next step; this exists now so the
-   /menu/<view> routing and the home card's link are real. *@
 
 <PageTitle>@L["Week_Title"] · @L["AppName"]</PageTitle>
 
-<div class="panel">
-    <h1>@L["Week_Title"]</h1>
-    <p class="muted">@L["Week_ComingSoon"]</p>
+<div class="week-bar">
+    <button type="button" class="week-bar__button" @onclick="() => ShiftAsync(-7)" title="@L["Week_Previous"]">‹</button>
+    <button type="button" class="week-bar__button" @onclick="GoToTodayAsync">@L["Week_Today"]</button>
+    <button type="button" class="week-bar__button" @onclick="() => ShiftAsync(7)" title="@L["Week_Next"]">›</button>
+
+    <span class="week-bar__range">@RangeLabel()</span>
+    <span class="week-bar__spacer"></span>
+
+    @if (_loading)
+    {
+        <span class="loading">@L["Loading"]</span>
+    }
 </div>
+
+@if (_range is { Issues.Count: > 0 })
+{
+    @* Problems in the files are surfaced, never thrown. A hand-edited menu that
+       cannot be parsed must still leave the rest of the week usable. *@
+    <div class="issues">
+        <strong>@L["Issues_Title"]</strong>
+        <ul>
+            @foreach (var issue in _range.Issues)
+            {
+                <li>@issue.Message</li>
+            }
+        </ul>
+    </div>
+}
+
+<div class="menu-grid-scroll">
+    <MenuGrid Days="@(_range?.Days ?? [])"
+              Slots="@_slots"
+              Markers="@_markers"
+              OnCreate="OnCreate"
+              OnEdit="OnEdit" />
+</div>
+
+<EntryDialog Target="@_editing"
+             Version="@_range?.Version"
+             OnSaved="OnSavedAsync"
+             OnCancelled="@(() => _editing = null)" />
+
+@code {
+    private MenuRangeResponse? _range;
+    private IReadOnlyList<SlotDefinition> _slots = [];
+    private List<DayMarker> _markers = [];
+    private DateOnly _start;
+    private bool _loading = true;
+    private MenuEntryRef? _editing;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var status = await Status.GetAsync();
+        _slots = status.Slots;
+        _start = StartOfWeek(DateOnly.FromDateTime(DateTime.Now), status.WeekStart);
+
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+
+        var end = _start.AddDays(6);
+        _range = await Menu.RangeAsync(_start, end);
+
+        // Markers come from the shopping schedule, not the menu files: they are
+        // moments in the day rather than meals.
+        _markers = [];
+
+        if (await Shopping.NextTripAsync() is { } trip)
+        {
+            _markers.Add(new DayMarker(trip.Order.At, "order", $"{L["Shopping_Order"]} · {trip.Order.At:HH:mm}"));
+            _markers.Add(new DayMarker(trip.Delivery.At, "delivery", $"{L["Shopping_Delivery"]} · {trip.Delivery.At:HH:mm}"));
+        }
+
+        _loading = false;
+    }
+
+    private async Task ShiftAsync(int days)
+    {
+        _start = _start.AddDays(days);
+        await LoadAsync();
+    }
+
+    private async Task GoToTodayAsync()
+    {
+        _start = StartOfWeek(DateOnly.FromDateTime(DateTime.Now), (await Status.GetAsync()).WeekStart);
+        await LoadAsync();
+    }
+
+    private void OnCreate((DateOnly Date, string Slot) target) =>
+        // Index 0 on an empty cell: the store appends when the index is past the end.
+        _editing = new MenuEntryRef(target.Date, target.Slot, 0, new MenuEntry { Title = string.Empty });
+
+    private void OnEdit(MenuEntryRef entry) => _editing = entry;
+
+    private async Task OnSavedAsync()
+    {
+        _editing = null;
+        await LoadAsync();
+    }
+
+    private string RangeLabel()
+    {
+        var end = _start.AddDays(6);
+
+        // Only repeat the month and year when the week actually straddles one.
+        if (_start.Month == end.Month)
+        {
+            return $"{_start.Day} – {end:d MMMM yyyy}";
+        }
+
+        return _start.Year == end.Year
+            ? $"{_start:d MMM} – {end:d MMM yyyy}"
+            : $"{_start:d MMM yyyy} – {end:d MMM yyyy}";
+    }
+
+    /// <summary>Rolls a date back to the configured first day of the week.</summary>
+    private static DateOnly StartOfWeek(DateOnly date, DayOfWeek weekStart)
+    {
+        var offset = ((int)date.DayOfWeek - (int)weekStart + 7) % 7;
+        return date.AddDays(-offset);
+    }
+}

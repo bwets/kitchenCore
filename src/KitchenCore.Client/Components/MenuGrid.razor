@@ -1,0 +1,165 @@
+@inject IStringLocalizer<Strings> L
+
+@*
+    The menu grid.
+
+    ONE CSS grid, not a row of per-day stacks. The brief asks for a column per
+    day, but the columns also have to line up across slots: every lunch on one
+    visual line, every dinner on the next. Seven independent stacks break that
+    the moment one day skips a slot or holds two entries -- so days are columns,
+    slots are rows, and every day renders a cell for every slot. An empty cell is
+    not a gap; it is the "add here" target.
+
+    The same component serves the week and multi-week views: multi-week just
+    hands it several week bands.
+*@
+
+<div class="menu-grid" style="@GridStyle()">
+
+    @* Corner of the sticky gutter. *@
+    <div class="menu-grid__corner"></div>
+
+    @foreach (var day in Days)
+    {
+        <div class="menu-grid__dayhead @(IsToday(day.Date) ? "is-today" : null)">
+            <span class="menu-grid__dayname">@day.Date.ToString("ddd")</span>
+            <span class="menu-grid__daynum">@day.Date.Day</span>
+        </div>
+    }
+
+    @foreach (var slot in Slots)
+    {
+        <div class="menu-grid__gutter @SlotTone.CssClass(slot.Key)">
+            <span class="slot-label">@slot.Label(Culture)</span>
+        </div>
+
+        @foreach (var day in Days)
+        {
+            var cell = CellFor(day, slot.Key);
+
+            <div class="menu-grid__cell @(IsToday(day.Date) ? "is-today" : null)">
+                @if (cell is null || cell.IsEmpty)
+                {
+                    <button type="button"
+                            class="menu-cell menu-cell--empty"
+                            title="@L["Grid_Add"]"
+                            @onclick="() => OnCreate.InvokeAsync((day.Date, slot.Key))">
+                        <span aria-hidden="true">+</span>
+                        <span class="visually-hidden">@L["Grid_Add"]</span>
+                    </button>
+                }
+                else
+                {
+                    <div class="menu-cell @SlotTone.CssClass(slot.Key) @(cell.IsDuplicated ? "is-duplicated" : null)">
+                        @for (var i = 0; i < cell.Entries.Count; i++)
+                        {
+                            var index = i;
+                            var entry = cell.Entries[index];
+
+                            <button type="button"
+                                    class="menu-entry @(entry.Status == EntryStatus.Requested ? "is-requested" : null)"
+                                    title="@Tooltip(entry)"
+                                    @onclick="() => OnEdit.InvokeAsync(new MenuEntryRef(day.Date, slot.Key, index, entry))">
+                                <span class="menu-entry__title">@entry.Title</span>
+
+                                @if (!string.IsNullOrWhiteSpace(entry.Notes))
+                                {
+                                    <span class="menu-entry__mark" title="@entry.Notes" aria-hidden="true">note</span>
+                                }
+                            </button>
+                        }
+
+                        @if (cell.IsDuplicated)
+                        {
+                            @* Two entries in one slot. Tolerated in the file, always
+                               flagged here, and resolved by keeping one. *@
+                            <span class="menu-cell__flag" title="@L["Duplicate_Hint"]">@L["Duplicate_Short"]</span>
+                        }
+                    </div>
+                }
+            </div>
+        }
+    }
+
+    @* Shopping markers, drawn over the day columns rather than occupying a slot:
+       they are moments in the day, not meals. One overlay per day, spanning every
+       slot row, with each marker placed by its time. *@
+    @foreach (var day in Days)
+    {
+        var markers = MarkersOn(day.Date).ToList();
+
+        if (markers.Count > 0)
+        {
+            <div class="menu-grid__overlay" style="@OverlayStyle(day.Date)">
+                @foreach (var marker in markers)
+                {
+                    <span class="day-marker day-marker--@marker.Kind"
+                          style="top:@(FractionOfDay(marker.At).ToString("0.##", Invariant))%"
+                          title="@marker.Label">
+                        <span class="day-marker__chip">@marker.At.ToString("HH:mm")</span>
+                    </span>
+                }
+            </div>
+        }
+    }
+</div>
+
+@code {
+    private static readonly System.Globalization.CultureInfo Invariant =
+        System.Globalization.CultureInfo.InvariantCulture;
+
+    /// <summary>Hours the grid represents, used to place a marker vertically.</summary>
+    private const double DayStartHour = 6;
+    private const double DayEndHour = 23;
+
+    [Parameter, EditorRequired]
+    public IReadOnlyList<MenuDay> Days { get; set; } = [];
+
+    [Parameter, EditorRequired]
+    public IReadOnlyList<SlotDefinition> Slots { get; set; } = [];
+
+    /// <summary>Shopping moments to draw across the days.</summary>
+    [Parameter]
+    public IReadOnlyList<DayMarker> Markers { get; set; } = [];
+
+    [Parameter]
+    public EventCallback<(DateOnly Date, string Slot)> OnCreate { get; set; }
+
+    [Parameter]
+    public EventCallback<MenuEntryRef> OnEdit { get; set; }
+
+    private static string Culture =>
+        System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+
+    private static bool IsToday(DateOnly date) => date == DateOnly.FromDateTime(DateTime.Now);
+
+    private string GridStyle() => $"--day-count:{Days.Count};--slot-count:{Slots.Count}";
+
+    /// <summary>Places the overlay over one day column, spanning all slot rows.</summary>
+    private string OverlayStyle(DateOnly date)
+    {
+        var column = Days.ToList().FindIndex(d => d.Date == date) + 2; // +1 for gutter, +1 for 1-based
+        return $"grid-column:{column};grid-row:2 / span {Slots.Count}";
+    }
+
+    private IEnumerable<DayMarker> MarkersOn(DateOnly date) =>
+        Markers.Where(m => DateOnly.FromDateTime(m.At) == date);
+
+    /// <summary>
+    /// Where a time sits down the column, as a percentage. Clamped, so a 03:00
+    /// delivery pins to the top rather than rendering off the grid.
+    /// </summary>
+    private static double FractionOfDay(DateTime at)
+    {
+        var hour = at.Hour + (at.Minute / 60.0);
+        var fraction = (hour - DayStartHour) / (DayEndHour - DayStartHour);
+
+        return Math.Clamp(fraction, 0, 1) * 100;
+    }
+
+    private static MenuCell? CellFor(MenuDay day, string slot) =>
+        day.Cells.FirstOrDefault(c => string.Equals(c.Slot, slot, StringComparison.OrdinalIgnoreCase));
+
+    private static string Tooltip(MenuEntry entry) =>
+        string.IsNullOrWhiteSpace(entry.Notes) ? entry.Title : $"{entry.Title}\n\n{entry.Notes}";
+}

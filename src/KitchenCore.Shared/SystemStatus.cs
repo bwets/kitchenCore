@@ -48,6 +48,9 @@ public sealed record SystemStatus
 {
     public required GitStatus Git { get; init; }
     public required IReadOnlyList<SlotDefinition> Slots { get; init; }
+    /// <summary>First day of the week. Monday for this family.</summary>
+    public DayOfWeek WeekStart { get; init; } = DayOfWeek.Monday;
+
     public required string DefaultCulture { get; init; }
     public IReadOnlyList<string> AvailableCultures { get; init; } = [];
 

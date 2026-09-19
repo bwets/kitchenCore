@@ -59,4 +59,20 @@
   <data name="Duplicate_Hint" xml:space="preserve"><value>Ce repas contient plusieurs entrées. Gardez-en une pour résoudre.</value></data>
   <data name="Week_Title" xml:space="preserve"><value>Semaine</value></data>
   <data name="Week_ComingSoon" xml:space="preserve"><value>La grille de la semaine arrive à la prochaine étape.</value></data>
+  <data name="Week_Previous" xml:space="preserve"><value>Semaine précédente</value></data>
+  <data name="Week_Next" xml:space="preserve"><value>Semaine suivante</value></data>
+  <data name="Week_Today" xml:space="preserve"><value>Aujourd'hui</value></data>
+  <data name="Grid_Add" xml:space="preserve"><value>Ajouter</value></data>
+  <data name="Issues_Title" xml:space="preserve"><value>Certaines entrées n'ont pas pu être lues :</value></data>
+  <data name="Entry_New" xml:space="preserve"><value>Nouvelle entrée</value></data>
+  <data name="Entry_Edit" xml:space="preserve"><value>Modifier</value></data>
+  <data name="Entry_Title" xml:space="preserve"><value>Titre</value></data>
+  <data name="Entry_Notes" xml:space="preserve"><value>Notes</value></data>
+  <data name="Entry_Links" xml:space="preserve"><value>Liens</value></data>
+  <data name="Entry_LinksHint" xml:space="preserve"><value>Un par ligne.</value></data>
+  <data name="Entry_Delete" xml:space="preserve"><value>Supprimer</value></data>
+  <data name="Save" xml:space="preserve"><value>Enregistrer</value></data>
+  <data name="Cancel" xml:space="preserve"><value>Annuler</value></data>
+  <data name="Conflict" xml:space="preserve"><value>Quelqu'un a modifié cette semaine. Fermez et rouvrez pour voir sa version.</value></data>
+  <data name="SaveFailed" xml:space="preserve"><value>L'enregistrement a échoué.</value></data>
 </root>

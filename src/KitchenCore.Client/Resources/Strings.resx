@@ -59,4 +59,20 @@
   <data name="Duplicate_Hint" xml:space="preserve"><value>This slot holds more than one entry. Keep one to resolve it.</value></data>
   <data name="Week_Title" xml:space="preserve"><value>Week</value></data>
   <data name="Week_ComingSoon" xml:space="preserve"><value>The week grid lands in the next step.</value></data>
+  <data name="Week_Previous" xml:space="preserve"><value>Previous week</value></data>
+  <data name="Week_Next" xml:space="preserve"><value>Next week</value></data>
+  <data name="Week_Today" xml:space="preserve"><value>Today</value></data>
+  <data name="Grid_Add" xml:space="preserve"><value>Add</value></data>
+  <data name="Issues_Title" xml:space="preserve"><value>Some entries could not be read:</value></data>
+  <data name="Entry_New" xml:space="preserve"><value>New entry</value></data>
+  <data name="Entry_Edit" xml:space="preserve"><value>Edit entry</value></data>
+  <data name="Entry_Title" xml:space="preserve"><value>Title</value></data>
+  <data name="Entry_Notes" xml:space="preserve"><value>Notes</value></data>
+  <data name="Entry_Links" xml:space="preserve"><value>Links</value></data>
+  <data name="Entry_LinksHint" xml:space="preserve"><value>One per line.</value></data>
+  <data name="Entry_Delete" xml:space="preserve"><value>Delete</value></data>
+  <data name="Save" xml:space="preserve"><value>Save</value></data>
+  <data name="Cancel" xml:space="preserve"><value>Cancel</value></data>
+  <data name="Conflict" xml:space="preserve"><value>Someone else changed this week. Close and reopen to see their version.</value></data>
+  <data name="SaveFailed" xml:space="preserve"><value>That could not be saved.</value></data>
 </root>

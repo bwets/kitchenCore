@@ -25,6 +25,7 @@ public static class SystemEndpoints
             {
                 Git = await detector.GetStatusAsync(cancellationToken),
                 Slots = config.OrderedSlots,
+                WeekStart = config.WeekStart,
                 DefaultCulture = config.Locale.Default,
                 AvailableCultures = config.Locale.Available,
                 DataPath = paths.DataRoot,

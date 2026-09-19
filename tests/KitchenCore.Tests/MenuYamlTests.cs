@@ -172,6 +172,49 @@ public class MenuYamlTests
     }
 
     [Fact]
+    public void A_one_line_note_stays_a_plain_scalar()
+    {
+        // It used to come back as a folded '>' block, because the trailing
+        // newline meant for the literal form was being added unconditionally.
+        // That made a hand-written file look mangled after its first save.
+        var yaml = Writer().Write(2026, [new MenuDayRecord(new DateOnly(2026, 5, 1),
+            [new SlotEntry("lunch", new MenuEntry { Title = "Soupe", Notes = "Sans sel" })])]);
+
+        Assert.Contains("notes: Sans sel", yaml);
+        Assert.DoesNotContain("notes: >", yaml);
+    }
+
+    [Fact]
+    public void A_multi_line_note_stays_a_literal_block()
+    {
+        var yaml = Writer().Write(2026, [new MenuDayRecord(new DateOnly(2026, 5, 1),
+            [new SlotEntry("lunch", new MenuEntry { Title = "Soupe", Notes = "Une ligne\nEt une autre" })])]);
+
+        Assert.Contains("notes: |", yaml);
+
+        var reread = MenuYamlReader.Read("2026.yaml", yaml);
+        Assert.Equal("Une ligne\nEt une autre",
+            Assert.Single(reread.Days).Slots.Single().Entry.Notes!.TrimEnd());
+    }
+
+    [Fact]
+    public void Sequences_are_indented_under_their_key()
+    {
+        // Matches the idiomatic hand-written form, so a file the app rewrites
+        // still looks like one a person wrote.
+        var yaml = Writer().Write(2026, [new MenuDayRecord(new DateOnly(2026, 5, 1),
+        [
+            new SlotEntry("lunch", new MenuEntry
+            {
+                Title = "Soupe",
+                Links = ["https://example.com/a"],
+            }),
+        ])]);
+
+        Assert.Contains("\n        - https://example.com/a", yaml);
+    }
+
+    [Fact]
     public void An_empty_file_is_not_an_error()
     {
         // A menu folder that exists but holds nothing yet is the normal first-run

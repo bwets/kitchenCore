@@ -1,0 +1,316 @@
+@use "tokens" as *;
+
+// The menu grid.
+//
+// One grid, days across and slots down. The alignment requirement -- every lunch
+// on one line, every dinner on the next -- falls out of this for free: grid rows
+// size to their tallest cell, so a day holding two dinners grows the whole
+// dinner row and every other day's dinner stays level with it. Seven per-day
+// flex stacks could not do that.
+
+.menu-grid {
+  display: grid;
+  position: relative;
+  // A sticky gutter naming the rows, then one column per day.
+  grid-template-columns: auto repeat(var(--day-count), minmax(0, 1fr));
+  // The header sizes to its content; every slot row is equal. There is a fixed,
+  // small number of slots, so they can afford to be generous -- and 1fr rows in
+  // a grid of indefinite height all resolve to the tallest, which is exactly the
+  // "all rows the same size" rule, kept even when one cell holds two entries.
+  grid-template-rows: auto repeat(var(--slot-count), minmax(5.5rem, 1fr));
+  gap: 1px;
+  background: var(--outline-variant);
+  border: 1px solid var(--outline-variant);
+  border-radius: $radius-lg;
+  overflow: hidden;
+
+  // Every child paints its own background; the 1px gap above shows through as
+  // the grid lines, which avoids a pile of per-cell borders.
+  > * {
+    background: var(--surface-container-lowest);
+  }
+
+  &__corner {
+    position: sticky;
+    left: 0;
+    z-index: 3;
+  }
+
+  &__dayhead {
+    display: flex;
+    align-items: baseline;
+    gap: $space-2;
+    padding: $space-2 $space-3;
+    background: var(--surface-container-low);
+    font-size: 0.8rem;
+    color: var(--on-surface-variant);
+    text-transform: capitalize;
+
+    &.is-today {
+      background: var(--primary-container);
+      color: var(--on-primary-container);
+      font-weight: 600;
+    }
+  }
+
+  &__dayname {
+    letter-spacing: 0.02em;
+  }
+
+  &__daynum {
+    font-size: 1rem;
+    font-weight: 650;
+    font-variant-numeric: tabular-nums;
+  }
+
+  // The row label. Sticky so the slot stays identifiable while scrolling days
+  // sideways on a narrow screen -- otherwise the alignment is present but
+  // unreadable.
+  &__gutter {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    padding: $space-2;
+    background: var(--surface-container-low);
+  }
+
+  &__cell {
+    padding: $space-1;
+
+    &.is-today {
+      background: var(--surface-container-low);
+    }
+  }
+
+  // Markers are drawn over a day column, spanning every slot row, so they can sit
+  // at their time of day instead of being pinned to a slot.
+  //
+  // position:absolute is load-bearing, not decoration. An ordinary grid item
+  // OCCUPIES the cells of its grid area, so auto-placed cells flow around it and
+  // the whole grid shears sideways from the first marker onwards. An absolutely
+  // positioned grid item still uses its grid area as its containing block -- so
+  // it lands over the right day and rows -- while being out of flow, which is
+  // exactly what an overlay needs.
+  &__overlay {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: transparent;
+    z-index: 1;
+  }
+}
+
+.menu-cell {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: $space-1;
+  height: 100%;
+  position: relative;
+
+  &--empty {
+    width: 100%;
+    height: 100%;
+    min-height: 2.75rem;
+    border: 0;
+    border-radius: $radius-sm;
+    background: transparent;
+    color: var(--outline);
+    font-size: 1.1rem;
+    opacity: 0;
+    transition: opacity 120ms ease, background 120ms ease;
+
+    &:hover,
+    &:focus-visible {
+      opacity: 1;
+      background: var(--surface-container);
+    }
+
+    // Always visible where hover does not exist, or the only way to add a meal
+    // on a phone would be invisible.
+    @media (hover: none) {
+      opacity: 0.5;
+    }
+  }
+
+  &.is-duplicated {
+    outline: 2px solid var(--error);
+    outline-offset: -2px;
+    border-radius: $radius-sm;
+  }
+
+  &__flag {
+    align-self: flex-start;
+    padding: 0 $space-1;
+    border-radius: $radius-xs;
+    background: var(--error-container);
+    color: var(--on-error-container);
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+  }
+}
+
+// Deliberately quiet. The slot colour lives in the gutter chip that names the
+// row; repeating it as a fill and a left border on every item made the grid read
+// as colour first and food second.
+.menu-entry {
+  display: flex;
+  align-items: flex-start;
+  gap: $space-1;
+  width: 100%;
+  padding: $space-2 $space-3;
+  border: 1px solid var(--outline-variant);
+  border-radius: $radius-sm;
+  background: var(--surface-container);
+  color: var(--on-surface);
+  font-size: 0.9rem;
+  line-height: 1.3;
+  text-align: left;
+
+  &:hover {
+    border-color: var(--slot-accent, var(--outline));
+    background: var(--surface-container-high);
+  }
+
+  &__title {
+    flex: 1 1 auto;
+    min-width: 0;
+    // Two lines, so one long title cannot push its row far taller than the rest.
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  &__mark {
+    flex: none;
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    opacity: 0.65;
+  }
+
+  &.is-requested {
+    // A request is a proposal, not a decision: dashed until an editor accepts it.
+    background: transparent;
+    border-style: dashed;
+  }
+}
+
+// Order deadline and delivery, as a line across the day at their time.
+.day-marker {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 0;
+  border-top: 2px dashed var(--marker-order);
+  display: flex;
+  justify-content: flex-end;
+
+  &--delivery {
+    border-top-color: var(--marker-delivery);
+    border-top-style: solid;
+  }
+
+  &__chip {
+    transform: translateY(-50%);
+    margin-right: $space-1;
+    padding: 0 $space-1;
+    border-radius: $radius-xs;
+    background: var(--marker-order);
+    color: #fff;
+    font-size: 0.6rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &--delivery &__chip {
+    background: var(--marker-delivery);
+  }
+}
+
+// Week navigation.
+.week-bar {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+  margin-bottom: $space-4;
+  flex-wrap: wrap;
+
+  &__range {
+    font-weight: 650;
+    text-transform: capitalize;
+  }
+
+  &__spacer {
+    flex: 1 1 auto;
+  }
+
+  &__button {
+    min-height: 2.5rem;
+    padding: 0 $space-3;
+    border: 1px solid var(--outline-variant);
+    border-radius: $radius-full;
+    background: var(--surface-container-low);
+    color: var(--on-surface);
+    font-size: 0.85rem;
+
+    &:hover {
+      background: var(--surface-container-high);
+    }
+  }
+}
+
+// Phone: one day at a time, swiped.
+//
+// Same grid and the same slot rows -- only the column width changes, so the
+// alignment is not re-expressed for a second layout. The earlier attempt used
+// 60vw columns, which showed one and a half days: too narrow to read and too
+// wide to swipe cleanly. A column sized to exactly the space left beside the
+// gutter gives one whole day per screen, with the slot labels pinned alongside
+// so you always know which row you are looking at.
+@media (max-width: $bp-tablet) {
+  .menu-grid-scroll {
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    // The page gutter, so a snapped day sits flush with the screen.
+    margin: 0 (-$space-3);
+    padding: 0 $space-3;
+  }
+
+  .menu-grid {
+    --gutter-width: 4rem;
+    grid-template-columns: var(--gutter-width) repeat(var(--day-count), calc(100vw - var(--gutter-width) - #{$space-4}));
+    grid-template-rows: auto repeat(var(--slot-count), minmax(4.75rem, 1fr));
+    border-radius: $radius-md;
+  }
+
+  .menu-grid__gutter {
+    padding: $space-1;
+
+    .slot-label {
+      // No room for the pill treatment beside a full-width day; keep the colour,
+      // drop the chrome.
+      padding: 0;
+      background: transparent;
+      color: var(--slot-accent);
+      font-size: 0.7rem;
+    }
+  }
+
+  .menu-grid__dayhead,
+  .menu-grid__cell {
+    scroll-snap-align: start;
+  }
+
+  .menu-grid__dayhead {
+    // Stays put while scrolling down a long day.
+    position: sticky;
+    top: 0;
+    z-index: 2;
+  }
+}
