@@ -11,6 +11,9 @@ builder.RootComponents.Add<HeadOutlet>("head::after");
 
 builder.Services.AddSingleton(_ => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
 builder.Services.AddSingleton<SystemStatusService>();
+builder.Services.AddSingleton<MenuClient>();
+builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddSingleton<IShoppingSchedule, PredictedShoppingSchedule>();
 builder.Services.AddSingleton<CulturePreference>();
 builder.Services.AddSingleton<ThemePreference>();
 builder.Services.AddLocalization();

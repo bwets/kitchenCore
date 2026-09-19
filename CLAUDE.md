@@ -92,6 +92,23 @@ These are settled; don't relitigate them without a reason.
 
 Section first, then view. API routes mirror it: `/api/menu/...`, `/api/shopping/...`.
 
+## Shopping (part 2, already shaping part 1)
+
+A shopping trip has **two** moments, each with a date *and* a time:
+
+- **order** -- when the order must be placed
+- **delivery** -- when it arrives, or when the store trip happens
+
+Both are **predicted** until the order is actually placed, at which point they
+become confirmed. The UI has to show which of the two it is: a predicted date
+is a plan, a confirmed one is a commitment.
+
+Both appear on the menu calendar as a horizontal line across the day, positioned
+by time of day: **blue for the order deadline, green for the delivery.** They are
+markers on the week and multi-week grids, not menu entries, so they draw over the
+day column rather than occupying a slot. (Implemented with the week grid in S3/S4;
+the model exists now so the home card and the grid agree.)
+
 ## Frontend conventions
 
 - Blazor **WebAssembly** + minimal API. Server owns the files; client talks JSON.

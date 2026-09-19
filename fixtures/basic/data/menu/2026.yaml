@@ -3,6 +3,27 @@
 year: 2026
 
 days:
+  # The weekend before, so the home card has something to show on a September
+  # Saturday. Fixture dates are fixed; "today" is not, so this drifts -- extend
+  # the range rather than expecting it to line up forever.
+  2026-09-19:
+    lunch:
+      title: Croque au fromage
+    gouter:
+      title: Cake aux pommes
+    dinner:
+      title: Risotto aux champignons
+      notes: |
+        Finir le bouillon du frigo.
+      links:
+        - https://example.com/risotto
+
+  2026-09-20:
+    lunch:
+      title: Rôti froid / salade
+    dinner:
+      title: Soupe à l'oignon
+
   2026-09-21:
     lunch:
       title: Croque-monsieur

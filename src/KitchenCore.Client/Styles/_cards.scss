@@ -1,0 +1,158 @@
+@use "tokens" as *;
+
+.cards {
+  display: grid;
+  gap: $space-4;
+  grid-template-columns: repeat(auto-fit, minmax(19rem, 1fr));
+  align-items: start;
+}
+
+.card {
+  padding: $space-5;
+  background: var(--surface-container-lowest);
+  border: 1px solid var(--outline-variant);
+  border-radius: $radius-lg;
+
+  &__head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: $space-3;
+    margin-bottom: $space-4;
+  }
+
+  &__title {
+    margin: 0;
+    font-size: 1.05rem;
+  }
+
+  &__subtitle {
+    margin: $space-1 0 0;
+    color: var(--on-surface-variant);
+    font-size: 0.85rem;
+    text-transform: capitalize;
+  }
+
+  &__action {
+    flex: none;
+    padding: $space-1 $space-3;
+    border-radius: $radius-full;
+    background: var(--primary-container);
+    color: var(--on-primary-container);
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  &__note {
+    margin: $space-4 0 0;
+    color: var(--on-surface-variant);
+    font-size: 0.78rem;
+    line-height: 1.4;
+  }
+}
+
+// Today's menu: one row per configured slot, empty ones included, so the shape
+// of the day is the same every morning.
+.today {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: $space-2;
+
+  &__row {
+    display: flex;
+    align-items: center;
+    gap: $space-3;
+    padding: $space-2;
+    border-radius: $radius-md;
+    background: var(--surface-container-low);
+  }
+
+  &__titles {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $space-1 $space-3;
+    min-width: 0;
+  }
+
+  &__title {
+    font-weight: 500;
+
+    // Several titles in one slot is the flagged duplicate state; separate them
+    // visibly rather than letting them read as one dish.
+    & + & {
+      padding-left: $space-3;
+      border-left: 2px solid var(--error);
+    }
+  }
+
+  &__empty {
+    color: var(--on-surface-variant);
+    font-size: 0.9rem;
+  }
+}
+
+// The two shopping moments. The coloured rule is the same language the week grid
+// uses for its markers: blue for the order deadline, green for the delivery.
+.moments {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: $space-3;
+}
+
+.moment {
+  display: flex;
+  align-items: center;
+  gap: $space-3;
+  padding-left: $space-3;
+  position: relative;
+
+  &__rule {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    border-radius: 3px;
+  }
+
+  &--order &__rule { background: var(--marker-order); }
+
+  &--delivery &__rule { background: var(--marker-delivery); }
+
+  &__label {
+    min-width: 5.5rem;
+    color: var(--on-surface-variant);
+    font-size: 0.85rem;
+  }
+
+  &__when {
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    text-transform: capitalize;
+  }
+}
+
+.badge {
+  flex: none;
+  padding: 2px $space-2;
+  border-radius: $radius-full;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+
+  &--soft {
+    background: var(--surface-container-high);
+    color: var(--on-surface-variant);
+  }
+
+  &--error {
+    background: var(--error-container);
+    color: var(--on-error-container);
+  }
+}

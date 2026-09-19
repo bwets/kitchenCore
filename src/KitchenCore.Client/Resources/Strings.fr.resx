@@ -44,4 +44,19 @@
   <data name="Theme_Dark" xml:space="preserve"><value>Sombre</value></data>
   <data name="Theme_Nord" xml:space="preserve"><value>Nord</value></data>
   <data name="Theme_Darcula" xml:space="preserve"><value>Darcula</value></data>
+  <data name="Nav_Home" xml:space="preserve"><value>Accueil</value></data>
+  <data name="Home_TodayMenu" xml:space="preserve"><value>Menu du jour</value></data>
+  <data name="Home_OpenWeek" xml:space="preserve"><value>Voir la semaine</value></data>
+  <data name="Home_NothingPlanned" xml:space="preserve"><value>Rien de prévu pour le moment.</value></data>
+  <data name="Home_NoEntry" xml:space="preserve"><value>--</value></data>
+  <data name="Home_NextShopping" xml:space="preserve"><value>Prochaines courses</value></data>
+  <data name="Shopping_Order" xml:space="preserve"><value>Commander avant</value></data>
+  <data name="Shopping_Delivery" xml:space="preserve"><value>Livraison</value></data>
+  <data name="Shopping_Predicted" xml:space="preserve"><value>prévu</value></data>
+  <data name="Shopping_MarkerHint" xml:space="preserve"><value>Les deux apparaissent sur le calendrier comme une ligne en travers du jour : bleu pour la commande, vert pour la livraison.</value></data>
+  <data name="Placeholder" xml:space="preserve"><value>provisoire</value></data>
+  <data name="Duplicate_Short" xml:space="preserve"><value>doublon</value></data>
+  <data name="Duplicate_Hint" xml:space="preserve"><value>Ce repas contient plusieurs entrées. Gardez-en une pour résoudre.</value></data>
+  <data name="Week_Title" xml:space="preserve"><value>Semaine</value></data>
+  <data name="Week_ComingSoon" xml:space="preserve"><value>La grille de la semaine arrive à la prochaine étape.</value></data>
 </root>

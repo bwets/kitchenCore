@@ -18,6 +18,9 @@ $required-tokens:
   surface-container surface-container-high surface-container-highest
   on-surface on-surface-variant outline outline-variant
   shadow-1 shadow-2
+  // Calendar markers: the shopping order deadline and the delivery, drawn as a
+  // line across the day. Blue and green respectively, per theme.
+  marker-order marker-delivery
   // Slot tones. Slots come from config, so the palette is positional: SlotTone.cs
   // maps a slot key onto one of these six.
   slot-0-container slot-0-on slot-0-accent

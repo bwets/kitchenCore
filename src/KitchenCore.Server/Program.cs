@@ -19,6 +19,7 @@ app.MapStaticAssets();
 
 app.MapGet("/healthz", () => Results.Ok(new { status = "ok" }));
 app.MapSystemEndpoints();
+app.MapMenuEndpoints();
 
 // Anything that is not an API route or a file is a client-side route.
 app.MapFallbackToFile("index.html");

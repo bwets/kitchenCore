@@ -60,7 +60,7 @@ public sealed class FixtureScenario : IDisposable
     }
 
     public IEnumerable<string> MenuFileNames() => Directory.Exists(MenuRoot)
-        ? Directory.EnumerateFiles(MenuRoot, "*.yaml").Select(Path.GetFileName)!
+        ? Directory.EnumerateFiles(MenuRoot, "*.yaml").Select(f => Path.GetFileName(f))
         : [];
 
     public void Dispose()
