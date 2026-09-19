@@ -1,0 +1,84 @@
+// Theme API.
+//
+// A theme is just a map of token name -> value. `emit-theme` turns it into CSS
+// custom properties, so adding Darcula or Nord means adding one map file and one
+// registry line -- no component, layout or slot code changes.
+//
+// Every theme must define the full token set: a missing key would silently
+// inherit whichever theme was emitted before it. `assert-complete` catches that
+// at build time instead.
+
+$required-tokens:
+  color-scheme
+  primary on-primary primary-container on-primary-container
+  secondary on-secondary secondary-container on-secondary-container
+  tertiary on-tertiary tertiary-container on-tertiary-container
+  error on-error error-container on-error-container
+  surface surface-container-lowest surface-container-low
+  surface-container surface-container-high surface-container-highest
+  on-surface on-surface-variant outline outline-variant
+  shadow-1 shadow-2
+  // Slot tones. Slots come from config, so the palette is positional: SlotTone.cs
+  // maps a slot key onto one of these six.
+  slot-0-container slot-0-on slot-0-accent
+  slot-1-container slot-1-on slot-1-accent
+  slot-2-container slot-2-on slot-2-accent
+  slot-3-container slot-3-on slot-3-accent
+  slot-4-container slot-4-on slot-4-accent
+  slot-5-container slot-5-on slot-5-accent;
+
+@mixin assert-complete($theme, $name) {
+  @each $token in $required-tokens {
+    @if not map-has-key($theme, $token) {
+      @error "Theme '#{$name}' is missing the token '#{$token}'.";
+    }
+  }
+}
+
+@mixin emit-theme($theme, $name: "theme") {
+  @include assert-complete($theme, $name);
+
+  @each $token, $value in $theme {
+    @if $token == color-scheme {
+      // Real property, not a custom one: it tells the browser which way to paint
+      // scrollbars, form controls and the canvas behind the page.
+      color-scheme: #{$value};
+    } @else {
+      --#{$token}: #{$value};
+    }
+  }
+
+  @include fluent-bridge;
+}
+
+// Fluent's own components paint from Fluent's design tokens, and its runtime
+// injects a stylesheet after ours -- so overriding its rules is a losing game.
+// Pointing its tokens at ours instead makes every Fluent control (dialogs,
+// menus, buttons) follow whichever theme is active, including themes added later.
+@mixin fluent-bridge {
+  --colorNeutralBackground1: var(--surface);
+  --colorNeutralBackground2: var(--surface-container-low);
+  --colorNeutralBackground3: var(--surface-container);
+  --colorNeutralBackground4: var(--surface-container-high);
+  --colorNeutralBackgroundInverted: var(--on-surface);
+
+  --colorNeutralForeground1: var(--on-surface);
+  --colorNeutralForeground2: var(--on-surface-variant);
+  --colorNeutralForeground3: var(--on-surface-variant);
+  --colorNeutralForegroundInverted: var(--surface);
+  --colorNeutralForegroundDisabled: var(--outline);
+
+  --colorNeutralStroke1: var(--outline-variant);
+  --colorNeutralStroke2: var(--outline-variant);
+  --colorNeutralStrokeAccessible: var(--outline);
+
+  --colorBrandBackground: var(--primary);
+  --colorBrandBackgroundHover: var(--primary);
+  --colorBrandBackgroundPressed: var(--on-primary-container);
+  --colorNeutralForegroundOnBrand: var(--on-primary);
+  --colorCompoundBrandStroke: var(--primary);
+  --colorCompoundBrandForeground1: var(--primary);
+
+  --colorPaletteRedForeground1: var(--error);
+  --colorPaletteRedBackground1: var(--error-container);
+}

@@ -1,0 +1,66 @@
+@implements IDisposable
+@inject ThemePreference Theme
+@inject IStringLocalizer<Strings> L
+
+@* A menu rather than a segmented toggle: the theme list is open-ended (Nord and
+   Darcula are already here, more will follow), so it has to grow without
+   redesigning the header. Custom because Fluent v5's menu API is still moving. *@
+
+<div class="theme-picker">
+    <button type="button"
+            class="theme-picker__trigger"
+            aria-haspopup="menu"
+            aria-expanded="@_open"
+            title="@L["Theme_Label"]"
+            @onclick="Toggle">
+        <span class="theme-picker__swatch" style="background:@Theme.Current.Swatch"></span>
+        <span class="visually-hidden">@L[Theme.Current.LabelKey]</span>
+    </button>
+
+    @if (_open)
+    {
+        @* Catches clicks anywhere else so the menu closes without a JS listener. *@
+        <button type="button" class="theme-picker__scrim" tabindex="-1"
+                aria-hidden="true" @onclick="Close"></button>
+
+        <ul class="theme-picker__menu" role="menu">
+            @foreach (var option in ThemeCatalog.All)
+            {
+                var isCurrent = option.Id == Theme.Current.Id;
+
+                <li role="none">
+                    <button type="button" role="menuitemradio" aria-checked="@isCurrent"
+                            class="theme-picker__item @(isCurrent ? "is-current" : null)"
+                            @onclick="() => SelectAsync(option)">
+                        <span class="theme-picker__swatch" style="background:@option.Swatch"></span>
+                        <span>@L[option.LabelKey]</span>
+                    </button>
+                </li>
+            }
+        </ul>
+    }
+</div>
+
+@code {
+    private bool _open;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Theme.Changed += OnChanged;
+        await Theme.InitializeAsync();
+    }
+
+    private void Toggle() => _open = !_open;
+
+    private void Close() => _open = false;
+
+    private async Task SelectAsync(ThemeOption option)
+    {
+        _open = false;
+        await Theme.SetAsync(option);
+    }
+
+    private void OnChanged() => StateHasChanged();
+
+    public void Dispose() => Theme.Changed -= OnChanged;
+}

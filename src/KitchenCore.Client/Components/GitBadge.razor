@@ -1,0 +1,59 @@
+@implements IDisposable
+@inject SystemStatusService Status
+@inject IStringLocalizer<Strings> L
+
+@* Which repository the data folder is, or a plain statement that there is none.
+   Git is enabled by the data folder being a repo, never by a setting, so this
+   badge is the one place that answers "why is nothing syncing?". *@
+
+@if (_git is null)
+{
+    <span class="git-badge">
+        <span class="git-badge__dot"></span>
+        <span class="git-badge__text">@L["Loading"]</span>
+    </span>
+}
+else if (_git.Enabled)
+{
+    <span class="git-badge git-badge--on" title="@(_git.RemoteUrl ?? ReasonText(_git.Reason))">
+        <span class="git-badge__dot"></span>
+        <span class="git-badge__text">@_git.Repository</span>
+        @if (!string.IsNullOrEmpty(_git.Branch))
+        {
+            <span class="git-badge__text git-badge__branch">· @_git.Branch</span>
+        }
+    </span>
+}
+else
+{
+    <span class="git-badge" title="@ReasonText(_git.Reason)">
+        <span class="git-badge__dot"></span>
+        <span class="git-badge__text">@L["Git_LocalOnly"]</span>
+    </span>
+}
+
+@code {
+    private GitStatus? _git;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Status.Changed += OnChanged;
+        _git = (await Status.GetAsync()).Git;
+    }
+
+    private void OnChanged()
+    {
+        _git = Status.Current?.Git;
+        StateHasChanged();
+    }
+
+    public void Dispose() => Status.Changed -= OnChanged;
+
+    private string ReasonText(GitDisabledReason reason) => reason switch
+    {
+        GitDisabledReason.NotARepository => L["Git_Reason_NotARepository"],
+        GitDisabledReason.DataFolderMissing => L["Git_Reason_DataFolderMissing"],
+        GitDisabledReason.NoRemote => L["Git_Reason_NoRemote"],
+        _ => string.Empty,
+    };
+}

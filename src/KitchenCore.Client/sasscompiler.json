@@ -1,0 +1,7 @@
+{
+  "Source": "Styles",
+  "Target": "wwwroot/css",
+  "Arguments": "--style=compressed --load-path=Styles",
+  "GenerateScopedCss": true,
+  "ScopedCssFolders": ["Layout", "Pages", "Components"]
+}

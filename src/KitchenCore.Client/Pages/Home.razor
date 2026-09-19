@@ -1,0 +1,54 @@
+@page "/"
+@inject SystemStatusService Status
+@inject IStringLocalizer<Strings> L
+
+<PageTitle>@L["AppName"]</PageTitle>
+
+<div class="panel">
+    <h1>@L["Home_Title"]</h1>
+    <p class="muted">@L["Home_Intro"]</p>
+
+    @if (_status is null)
+    {
+        <p class="loading">@L["Loading"]</p>
+    }
+    else
+    {
+        @* Scaffold diagnostics: makes it obvious at a glance which fixture the
+           launch profile pointed us at, and whether git detection found a repo.
+           The slot chips double as a preview of the tonal palette the week grid
+           will use for its rows. *@
+        <div class="chip-row">
+            @foreach (var slot in _status.Slots)
+            {
+                <span class="slot-label @SlotTone.CssClass(slot.Key)">@slot.Label(CurrentCulture)</span>
+            }
+        </div>
+
+        <dl class="status-list">
+            <dt>@L["Status_DataFolder"]</dt>
+            <dd>@_status.DataPath</dd>
+
+            <dt>@L["Status_Language"]</dt>
+            <dd>@CurrentCulture</dd>
+
+            <dt>@L["Status_Git"]</dt>
+            <dd>@GitSummary()</dd>
+        </dl>
+    }
+</div>
+
+@code {
+    private string GitSummary() => _status is null
+        ? string.Empty
+        : _status.Git.Enabled
+            ? $"{_status.Git.Repository} ({_status.Git.Branch})"
+            : L["Git_Reason_" + _status.Git.Reason].Value;
+
+    private SystemStatus? _status;
+
+    private static string CurrentCulture =>
+        System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+
+    protected override async Task OnInitializedAsync() => _status = await Status.GetAsync();
+}

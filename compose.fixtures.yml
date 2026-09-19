@@ -1,0 +1,11 @@
+# Run a fixture scenario in the container, the same way the launch profiles do
+# locally:
+#
+#   docker compose -f docker-compose.yml -f compose.fixtures.yml up --build
+#
+# Override which one with SCENARIO, e.g. SCENARIO=duplicates docker compose ...
+services:
+  kitchencore:
+    volumes:
+      - ./fixtures/${SCENARIO:-basic}/data:/app/data
+      - ./fixtures/${SCENARIO:-basic}/config:/app/config

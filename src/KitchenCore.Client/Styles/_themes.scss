@@ -1,0 +1,49 @@
+@use "theme-api" as *;
+@use "themes/light" as *;
+@use "themes/dark" as *;
+@use "themes/nord" as *;
+@use "themes/darcula" as *;
+
+// Theme registry.
+//
+// "auto" is the absence of a data-theme attribute: light by default, dark when
+// the device asks for dark. Every other theme is an explicit opt-in keyed on
+// data-theme, which ThemePreference writes onto <html>.
+//
+// Adding a theme is two lines: a map file, and an entry in $themes below (plus
+// one row in ThemeCatalog.cs so it appears in the picker).
+
+$themes: (
+  dark:    $theme-dark,
+  nord:    $theme-nord,
+  darcula: $theme-darcula,
+);
+
+// Auto, light branch -- also the base every other theme overrides.
+:root {
+  @include emit-theme($theme-light, "light");
+}
+
+// Auto, dark branch. Guarded so an explicit light choice still wins on a device
+// whose OS is dark.
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    @include emit-theme($theme-dark, "dark (auto)");
+  }
+}
+
+@each $name, $theme in $themes {
+  :root[data-theme="#{$name}"] {
+    @include emit-theme($theme, $name);
+  }
+}
+
+// Slot tones read straight from whichever theme is in force, so this mapping is
+// written once and never per theme.
+@for $i from 0 through 5 {
+  .slot-tone-#{$i} {
+    --slot-container: var(--slot-#{$i}-container);
+    --slot-on-container: var(--slot-#{$i}-on);
+    --slot-accent: var(--slot-#{$i}-accent);
+  }
+}

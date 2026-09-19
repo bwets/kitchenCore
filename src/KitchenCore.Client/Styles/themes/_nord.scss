@@ -1,0 +1,46 @@
+// Nord. Cool arctic palette (nordtheme.com), mapped onto the Material You roles.
+$theme-nord: (
+  color-scheme: dark,
+
+  primary:                #88c0d0,
+  on-primary:             #2e3440,
+  primary-container:      #3b4a55,
+  on-primary-container:   #d8dee9,
+
+  secondary:              #bf616a,
+  on-secondary:           #2e3440,
+  secondary-container:    #5c3a40,
+  on-secondary-container: #f0d6d9,
+
+  tertiary:               #ebcb8b,
+  on-tertiary:            #2e3440,
+  tertiary-container:     #5b4f33,
+  on-tertiary-container:  #f5e6c8,
+
+  error:                  #bf616a,
+  on-error:               #2e3440,
+  error-container:        #4d2b30,
+  on-error-container:     #f0d6d9,
+
+  surface:                    #2e3440,
+  surface-container-lowest:   #272c36,
+  surface-container-low:      #323844,
+  surface-container:          #3b4252,
+  surface-container-high:     #434c5e,
+  surface-container-highest:  #4c566a,
+
+  on-surface:          #eceff4,
+  on-surface-variant:  #d8dee9,
+  outline:             #7b88a1,
+  outline-variant:     #4c566a,
+
+  shadow-1: (0 1px 2px rgba(0, 0, 0, 0.45)),
+  shadow-2: (0 4px 14px rgba(0, 0, 0, 0.55)),
+
+  slot-0-container: #3f5a4a, slot-0-on: #d8f0e0, slot-0-accent: #a3be8c,
+  slot-1-container: #5b4f33, slot-1-on: #f5e6c8, slot-1-accent: #ebcb8b,
+  slot-2-container: #3b4a5e, slot-2-on: #d8e4f0, slot-2-accent: #81a1c1,
+  slot-3-container: #5c3a40, slot-3-on: #f0d6d9, slot-3-accent: #bf616a,
+  slot-4-container: #4a3f5a, slot-4-on: #e4d8f0, slot-4-accent: #b48ead,
+  slot-5-container: #34515a, slot-5-on: #d3ecf2, slot-5-accent: #88c0d0,
+);

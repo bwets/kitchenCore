@@ -1,0 +1,18 @@
+services:
+  kitchencore:
+    build: .
+    image: kitchencore:latest
+    container_name: kitchencore
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      # The brief only calls for /app/data, but config has to persist too: it
+      # holds the GitHub token and the approved-device list. It is mounted
+      # separately and deliberately kept OUT of the git-synced data folder.
+      - ./data:/app/data
+      - ./config:/app/config
+    environment:
+      # Prefer the environment over writing the token into config/app.yaml.
+      KITCHENCORE_GIT__TOKEN: "${KITCHENCORE_GIT_TOKEN:-}"
+      TZ: "${TZ:-Europe/Brussels}"

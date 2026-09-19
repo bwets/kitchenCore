@@ -1,0 +1,231 @@
+@use "tokens" as *;
+
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: $space-3;
+  height: var(--header-height);
+  padding: 0 $space-4;
+  background: var(--surface-container-low);
+  border-bottom: 1px solid var(--outline-variant);
+
+  &__brand {
+    display: inline-flex;
+    align-items: center;
+    gap: $space-2;
+    font-weight: 650;
+    letter-spacing: -0.01em;
+    white-space: nowrap;
+    color: var(--on-surface);
+  }
+
+  &__mark {
+    display: grid;
+    place-items: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: $radius-md;
+    background: var(--primary-container);
+    color: var(--on-primary-container);
+    font-size: 1rem;
+  }
+
+  &__nav {
+    display: flex;
+    gap: $space-1;
+    overflow-x: auto;
+    scrollbar-width: none;
+
+    &::-webkit-scrollbar { display: none; }
+  }
+
+  &__spacer { flex: 1 1 auto; }
+
+  &__tools {
+    display: flex;
+    align-items: center;
+    gap: $space-2;
+  }
+
+  @media (max-width: $bp-tablet) {
+    padding: 0 $space-3;
+    gap: $space-2;
+  }
+}
+
+.nav-link {
+  display: inline-flex;
+  align-items: center;
+  padding: $space-1 $space-4;
+  border-radius: $radius-full;
+  text-decoration: none;
+  color: var(--on-surface-variant);
+  white-space: nowrap;
+
+  &:hover { background: var(--surface-container-high); color: var(--on-surface); }
+
+  &.active {
+    background: var(--primary-container);
+    color: var(--on-primary-container);
+    font-weight: 600;
+  }
+}
+
+// Git badge.
+//
+// Git is enabled by the data folder being a repository, never by a setting, so
+// this badge is the one place that answers "why is nothing syncing?".
+.git-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-2;
+  padding: $space-1 $space-3;
+  border: 1px solid var(--outline-variant);
+  border-radius: $radius-full;
+  background: var(--surface-container);
+  font-size: 0.8rem;
+  color: var(--on-surface-variant);
+  white-space: nowrap;
+
+  &__dot {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    background: var(--outline);
+    flex: none;
+  }
+
+  &--on {
+    border-color: transparent;
+    background: var(--primary-container);
+    color: var(--on-primary-container);
+
+    .git-badge__dot { background: var(--primary); }
+  }
+
+  &__branch { opacity: 0.75; }
+
+  // On a small screen the badge collapses to its dot: the header has to fit a
+  // brand, nav, theme and language control, and the state is still readable as
+  // colour (green = a repo, grey = local only). The full text stays available
+  // through the title attribute.
+  @media (max-width: $bp-tablet) {
+    width: 2.25rem;
+    height: 2.25rem;
+    padding: 0;
+    justify-content: center;
+
+    &__text { display: none; }
+
+    &__dot {
+      width: 0.6rem;
+      height: 0.6rem;
+    }
+  }
+}
+
+// Segmented language toggle. Two languages do not justify a dropdown.
+.lang-toggle {
+  display: inline-flex;
+  padding: 2px;
+  gap: 2px;
+  border-radius: $radius-full;
+  background: var(--surface-container-high);
+
+  &__option {
+    min-height: 2rem;
+    padding: 0 $space-3;
+    border: 0;
+    border-radius: $radius-full;
+    background: transparent;
+    color: var(--on-surface-variant);
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+
+    &:hover { color: var(--on-surface); }
+
+    &.is-current {
+      background: var(--surface-container-lowest);
+      color: var(--on-surface);
+      box-shadow: var(--shadow-1);
+    }
+  }
+}
+
+// Theme picker. A menu rather than segments, because the theme list grows.
+.theme-picker {
+  position: relative;
+
+  &__trigger {
+    display: grid;
+    place-items: center;
+    width: 2.25rem;
+    min-height: 2.25rem;
+    padding: 0;
+    border: 1px solid var(--outline-variant);
+    border-radius: $radius-full;
+    background: var(--surface-container-high);
+  }
+
+  &__swatch {
+    width: 1.1rem;
+    height: 1.1rem;
+    border-radius: 50%;
+    border: 1px solid var(--outline-variant);
+    flex: none;
+  }
+
+  // Full-viewport click catcher so the menu closes without a JS listener.
+  &__scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 30;
+    min-height: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    cursor: default;
+  }
+
+  &__menu {
+    position: absolute;
+    z-index: 31;
+    top: calc(100% + #{$space-2});
+    right: 0;
+    min-width: 11rem;
+    margin: 0;
+    padding: $space-1;
+    list-style: none;
+    background: var(--surface-container-lowest);
+    border: 1px solid var(--outline-variant);
+    border-radius: $radius-md;
+    box-shadow: var(--shadow-2);
+  }
+
+  &__item {
+    display: flex;
+    align-items: center;
+    gap: $space-3;
+    width: 100%;
+    min-height: 2.5rem;
+    padding: 0 $space-3;
+    border: 0;
+    border-radius: $radius-sm;
+    background: transparent;
+    color: var(--on-surface);
+    font-size: 0.9rem;
+    text-align: left;
+
+    &:hover { background: var(--surface-container); }
+
+    &.is-current {
+      background: var(--primary-container);
+      color: var(--on-primary-container);
+      font-weight: 600;
+    }
+  }
+}

@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/KitchenCore.Client/KitchenCore.Client.csproj" />
+    <Project Path="src/KitchenCore.Core/KitchenCore.Core.csproj" />
+    <Project Path="src/KitchenCore.Server/KitchenCore.Server.csproj" />
+    <Project Path="src/KitchenCore.Shared/KitchenCore.Shared.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/KitchenCore.Tests/KitchenCore.Tests.csproj" />
+  </Folder>
+</Solution>

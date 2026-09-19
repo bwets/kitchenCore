@@ -1,0 +1,54 @@
+@use "tokens" as *;
+
+.app-main {
+  padding: $space-4;
+
+  @media (max-width: $bp-tablet) {
+    padding: $space-3;
+  }
+}
+
+// M3 tonal card: elevation as a tint step, not a shadow.
+.panel {
+  padding: $space-5;
+  background: var(--surface-container-lowest);
+  border: 1px solid var(--outline-variant);
+  border-radius: $radius-lg;
+
+  &--raised {
+    box-shadow: var(--shadow-1);
+    border-color: transparent;
+  }
+}
+
+.status-list {
+  margin: $space-4 0 0;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: $space-3 $space-5;
+  font-size: 0.9rem;
+  align-items: baseline;
+
+  dt {
+    color: var(--on-surface-variant);
+  }
+
+  dd {
+    margin: 0;
+    font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+    overflow-wrap: anywhere;
+  }
+
+  @media (max-width: $bp-phone) {
+    grid-template-columns: 1fr;
+    gap: $space-1 0;
+
+    dd { margin-bottom: $space-3; }
+  }
+}
+
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $space-2;
+}

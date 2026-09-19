@@ -1,0 +1,31 @@
+@inherits LayoutComponentBase
+@inject IStringLocalizer<Strings> L
+
+<header class="app-header">
+    <span class="app-header__brand">
+        <span class="app-header__mark" aria-hidden="true">
+            <BrandMark />
+        </span>
+        @L["AppName"]
+    </span>
+
+    <nav class="app-header__nav">
+        <NavLink class="nav-link" href="" Match="NavLinkMatch.All">@L["Nav_Week"]</NavLink>
+    </nav>
+
+    <span class="app-header__spacer"></span>
+
+    <div class="app-header__tools">
+        <ThemePicker />
+        <LanguagePicker />
+        <GitBadge />
+    </div>
+</header>
+
+<main class="app-main">
+    @Body
+</main>
+
+@* Fluent's providers back the dialog, toast and tooltip services. The entry
+   dialog and the drop-choice dialog in later sessions depend on these. *@
+<FluentProviders />

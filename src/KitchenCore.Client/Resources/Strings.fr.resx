@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType><xsd:choice maxOccurs="unbounded">
+        <xsd:element name="data">
+          <xsd:complexType><xsd:sequence>
+            <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+          </xsd:sequence>
+          <xsd:attribute name="name" type="xsd:string" msdata:Ordinal="1" />
+          <xsd:attribute name="xml:space" type="xsd:string" />
+          </xsd:complexType>
+        </xsd:element>
+        <xsd:element name="resheader">
+          <xsd:complexType><xsd:sequence>
+            <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+          </xsd:sequence><xsd:attribute name="name" type="xsd:string" use="required" /></xsd:complexType>
+        </xsd:element>
+      </xsd:choice></xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <data name="AppName" xml:space="preserve"><value>KitchenCore</value></data>
+  <data name="Nav_Week" xml:space="preserve"><value>Semaine</value></data>
+  <data name="Nav_MultiWeek" xml:space="preserve"><value>Multi-semaines</value></data>
+  <data name="Nav_List" xml:space="preserve"><value>Liste</value></data>
+  <data name="Git_LocalOnly" xml:space="preserve"><value>Local — pas de git</value></data>
+  <data name="Git_NoRepoHint" xml:space="preserve"><value>Le dossier de données n'est pas un dépôt git : rien n'est synchronisé.</value></data>
+  <data name="Home_Title" xml:space="preserve"><value>KitchenCore</value></data>
+  <data name="Home_Intro" xml:space="preserve"><value>Le menu de la semaine est ici. Choisissez une vue pour commencer.</value></data>
+  <data name="Status_DataFolder" xml:space="preserve"><value>Dossier de données</value></data>
+  <data name="Status_Slots" xml:space="preserve"><value>Repas</value></data>
+  <data name="Status_Language" xml:space="preserve"><value>Langue</value></data>
+  <data name="Status_Git" xml:space="preserve"><value>Git</value></data>
+  <data name="Loading" xml:space="preserve"><value>Chargement…</value></data>
+  <data name="Git_Reason_NotARepository" xml:space="preserve"><value>Le dossier de données n'est pas un dépôt git : rien n'est synchronisé.</value></data>
+  <data name="Git_Reason_DataFolderMissing" xml:space="preserve"><value>Le dossier de données n'existe pas encore.</value></data>
+  <data name="Git_Reason_NoRemote" xml:space="preserve"><value>Aucun dépôt distant : les commits restent locaux.</value></data>
+  <data name="Theme_Label" xml:space="preserve"><value>Thème</value></data>
+  <data name="Theme_Auto" xml:space="preserve"><value>Auto (appareil)</value></data>
+  <data name="Theme_Light" xml:space="preserve"><value>Clair</value></data>
+  <data name="Theme_Dark" xml:space="preserve"><value>Sombre</value></data>
+  <data name="Theme_Nord" xml:space="preserve"><value>Nord</value></data>
+  <data name="Theme_Darcula" xml:space="preserve"><value>Darcula</value></data>
+</root>

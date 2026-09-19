@@ -1,0 +1,20 @@
+@use "tokens" as *;
+
+// The tone classes themselves are generated in _themes.scss, because their
+// values come from whichever theme is active. SlotTone.cs decides which tone a
+// given slot key gets.
+
+// The label in the sticky gutter that names the row.
+.slot-label {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+  padding: $space-2 $space-3;
+  border-radius: $radius-full;
+  background: var(--slot-container, var(--surface-container));
+  color: var(--slot-on-container, var(--on-surface));
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}

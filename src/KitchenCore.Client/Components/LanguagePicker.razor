@@ -1,0 +1,52 @@
+@using System.Globalization
+@inject SystemStatusService Status
+@inject CulturePreference Culture
+
+@* A segmented toggle rather than a dropdown: with two languages a select costs
+   an extra click and shows nothing useful when closed. Custom rather than a
+   Fluent control because Fluent has no segmented control of its own. *@
+
+<div class="lang-toggle" role="group" aria-label="Language">
+    @foreach (var culture in _available)
+    {
+        var isCurrent = string.Equals(culture, _current, StringComparison.OrdinalIgnoreCase);
+
+        <button type="button"
+                class="lang-toggle__option @(isCurrent ? "is-current" : null)"
+                aria-pressed="@isCurrent"
+                title="@DisplayName(culture)"
+                @onclick="() => SelectAsync(culture)">
+            @culture.ToUpperInvariant()
+        </button>
+    }
+</div>
+
+@code {
+    private string _current = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+    private List<string> _available = ["fr", "en"];
+
+    protected override async Task OnInitializedAsync()
+    {
+        var status = await Status.GetAsync();
+        if (status.AvailableCultures.Count > 0)
+        {
+            _available = [.. status.AvailableCultures];
+        }
+    }
+
+    private async Task SelectAsync(string culture)
+    {
+        if (!string.Equals(culture, _current, StringComparison.OrdinalIgnoreCase))
+        {
+            // Changing culture means restarting the WebAssembly runtime, so this reloads.
+            await Culture.SetAsync(culture);
+        }
+    }
+
+    private static string DisplayName(string culture) => culture switch
+    {
+        "fr" => "Français",
+        "en" => "English",
+        _ => culture,
+    };
+}

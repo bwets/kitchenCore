@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>KitchenCore</title>
+    <base href="/" />
+    <link rel="icon" type="image/png" href="favicon.png" />
+    <script>
+        // Applied before the stylesheet paints and long before Blazor boots, so a
+        // remembered theme never flashes the default first. Absence of the key
+        // means "auto", which leaves prefers-color-scheme in charge.
+        try {
+            var t = localStorage.getItem('kitchencore.theme');
+            if (t) { document.documentElement.setAttribute('data-theme', t); }
+        } catch (e) { /* blocked site data: fall back to auto */ }
+    </script>
+    <link rel="stylesheet" href="_content/Microsoft.FluentUI.AspNetCore.Components/css/reboot.css" />
+    <link rel="stylesheet" href="css/app.css" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#3f6f52" />
+    <HeadOutlet></HeadOutlet>
+</head>
+
+<body>
+    <div id="app">
+        <div style="padding:2rem;font-family:system-ui;color:#6b727e">Chargement…</div>
+    </div>
+
+    <div id="blazor-error-ui" style="display:none">
+        Une erreur est survenue.
+        <a href="" class="reload">Recharger</a>
+    </div>
+
+    <script src="_framework/blazor.webassembly.js"></script>
+</body>
+
+</html>

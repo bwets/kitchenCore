@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json.schemastore.org/launchsettings.json",
+  "profiles": {
+    "KitchenCore": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "applicationUrl": "http://localhost:5080",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      }
+    },
+    "empty": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "applicationUrl": "http://localhost:5081",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "KITCHENCORE_DATA_PATH": "../../fixtures/empty/data",
+        "KITCHENCORE_CONFIG_PATH": "../../fixtures/empty/config"
+      }
+    },
+    "basic": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "applicationUrl": "http://localhost:5082",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "KITCHENCORE_DATA_PATH": "../../fixtures/basic/data",
+        "KITCHENCORE_CONFIG_PATH": "../../fixtures/basic/config"
+      }
+    },
+    "sharded": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "applicationUrl": "http://localhost:5083",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "KITCHENCORE_DATA_PATH": "../../fixtures/sharded/data",
+        "KITCHENCORE_CONFIG_PATH": "../../fixtures/sharded/config"
+      }
+    },
+    "year-boundary": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "applicationUrl": "http://localhost:5084",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "KITCHENCORE_DATA_PATH": "../../fixtures/year-boundary/data",
+        "KITCHENCORE_CONFIG_PATH": "../../fixtures/year-boundary/config"
+      }
+    },
+    "duplicates": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "applicationUrl": "http://localhost:5085",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "KITCHENCORE_DATA_PATH": "../../fixtures/duplicates/data",
+        "KITCHENCORE_CONFIG_PATH": "../../fixtures/duplicates/config"
+      }
+    },
+    "legacy": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "applicationUrl": "http://localhost:5086",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "KITCHENCORE_DATA_PATH": "../../fixtures/legacy/data",
+        "KITCHENCORE_CONFIG_PATH": "../../fixtures/legacy/config"
+      }
+    },
+    "requests": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "applicationUrl": "http://localhost:5087",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "KITCHENCORE_DATA_PATH": "../../fixtures/requests/data",
+        "KITCHENCORE_CONFIG_PATH": "../../fixtures/requests/config"
+      }
+    },
+    "roles": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "applicationUrl": "http://localhost:5088",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "KITCHENCORE_DATA_PATH": "../../fixtures/roles/data",
+        "KITCHENCORE_CONFIG_PATH": "../../fixtures/roles/config"
+      }
+    },
+    "git": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "applicationUrl": "http://localhost:5089",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "KITCHENCORE_DATA_PATH": "../../fixtures/git/data",
+        "KITCHENCORE_CONFIG_PATH": "../../fixtures/git/config"
+      }
+    },
+    "large": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "applicationUrl": "http://localhost:5090",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "KITCHENCORE_DATA_PATH": "../../fixtures/large/data",
+        "KITCHENCORE_CONFIG_PATH": "../../fixtures/large/config"
+      }
+    }
+  }
+}

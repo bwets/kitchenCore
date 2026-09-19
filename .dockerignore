@@ -1,0 +1,10 @@
+**/bin/
+**/obj/
+.git/
+.local/
+.vs/
+.idea/
+fixtures/
+data/
+config/
+docs/
