@@ -1,0 +1,92 @@
+@inject MenuClient Menu
+@inject IStringLocalizer<Strings> L
+
+@*
+    Asked whenever a drop lands on a slot that already holds something.
+
+    There is no silent overwrite and no swap -- the three outcomes are spelled
+    out, and shift-right shows the cascade it would cause before the user agrees
+    to move three other meals.
+*@
+
+@if (Request is not null)
+{
+    <div class="dialog-scrim" @onclick="Cancel"></div>
+
+    <div class="dialog dialog--choice" role="dialog" aria-modal="true" aria-label="@L["Drop_Title"]">
+        <h2 class="dialog__title">@L["Drop_Title"]</h2>
+        <p class="dialog__subtitle">@Description()</p>
+
+        <div class="choices">
+            <button type="button" class="choice" @onclick="() => ChooseAsync(DropMode.Insert)">
+                <span class="choice__name">@L["Drop_Insert"]</span>
+                <span class="choice__what">@L["Drop_InsertWhat"]</span>
+            </button>
+
+            <button type="button" class="choice" @onclick="() => ChooseAsync(DropMode.ShiftRight)">
+                <span class="choice__name">@L["Drop_Shift"]</span>
+                <span class="choice__what">@L["Drop_ShiftWhat"]</span>
+
+                @if (_preview is { Steps.Count: > 0 })
+                {
+                    @* What else moves, before agreeing to it. *@
+                    <ul class="choice__steps">
+                        @foreach (var step in _preview.Steps)
+                        {
+                            <li>@step.Title: @step.FromDate.ToString("ddd d") → @step.ToDate.ToString("ddd d")</li>
+                        }
+                    </ul>
+                }
+            </button>
+
+            <button type="button" class="choice choice--danger" @onclick="() => ChooseAsync(DropMode.Overwrite)">
+                <span class="choice__name">@L["Drop_Overwrite"]</span>
+                <span class="choice__what">@L["Drop_OverwriteWhat"]</span>
+            </button>
+        </div>
+
+        <footer class="dialog__foot">
+            <span class="dialog__spacer"></span>
+            <button type="button" class="button" @onclick="Cancel">@L["Cancel"]</button>
+        </footer>
+    </div>
+}
+
+@code {
+    private ShiftPreview? _preview;
+    private DropRequest? _lastRequest;
+
+    /// <summary>The pending drop. Null closes the dialog.</summary>
+    [Parameter]
+    public DropRequest? Request { get; set; }
+
+    [Parameter]
+    public EventCallback<DropMode> OnChosen { get; set; }
+
+    [Parameter]
+    public EventCallback OnCancelled { get; set; }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (ReferenceEquals(Request, _lastRequest))
+        {
+            return;
+        }
+
+        _lastRequest = Request;
+        _preview = null;
+
+        if (Request is not null)
+        {
+            _preview = await Menu.PreviewMoveAsync(Request.From, Request.To);
+        }
+    }
+
+    private Task ChooseAsync(DropMode mode) => OnChosen.InvokeAsync(mode);
+
+    private Task Cancel() => OnCancelled.InvokeAsync();
+
+    private string Description() => Request is null
+        ? string.Empty
+        : string.Format(L["Drop_Description"], Request.From.Entry.Title, Request.To.Date.ToString("dddd d MMMM"));
+}

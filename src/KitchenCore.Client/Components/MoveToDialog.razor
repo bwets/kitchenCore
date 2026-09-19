@@ -1,0 +1,99 @@
+@inject SystemStatusService Status
+@inject IStringLocalizer<Strings> L
+
+@*
+    The non-drag way to move an entry.
+
+    Dragging is not available to everyone -- keyboard users, screen readers, a
+    phone in one hand -- so every move has to be reachable without it. Reached by
+    right-click on a desktop and from the entry dialog elsewhere; it produces
+    exactly the same move, collision dialog included.
+*@
+
+@if (Entry is not null)
+{
+    <div class="dialog-scrim" @onclick="Cancel"></div>
+
+    <div class="dialog dialog--choice" role="dialog" aria-modal="true" aria-label="@L["Move_Title"]">
+        <h2 class="dialog__title">@L["Move_Title"]</h2>
+        <p class="dialog__subtitle">@Entry.Entry.Title</p>
+
+        <label class="field">
+            <span class="field__label">@L["Move_Day"]</span>
+            <input type="date" class="field__input" value="@_date.ToString("yyyy-MM-dd")"
+                   @onchange="OnDateChanged" />
+        </label>
+
+        <label class="field">
+            <span class="field__label">@L["Move_Slot"]</span>
+            <select class="field__input" @onchange="e => _slot = e.Value?.ToString() ?? _slot">
+                @foreach (var slot in _slots)
+                {
+                    <option value="@slot.Key" selected="@(slot.Key == _slot)">@slot.Label(Culture)</option>
+                }
+            </select>
+        </label>
+
+        <label class="field field--check">
+            <input type="checkbox" checked="@_copy" @onchange="e => _copy = (bool?)e.Value ?? false" />
+            <span>@L["Move_Copy"]</span>
+        </label>
+
+        <footer class="dialog__foot">
+            <span class="dialog__spacer"></span>
+            <button type="button" class="button" @onclick="Cancel">@L["Cancel"]</button>
+            <button type="button" class="button button--primary" @onclick="Confirm">@L["Move_Go"]</button>
+        </footer>
+    </div>
+}
+
+@code {
+    private DateOnly _date;
+    private string _slot = string.Empty;
+    private bool _copy;
+    private IReadOnlyList<SlotDefinition> _slots = [];
+    private MenuEntryRef? _last;
+
+    [Parameter]
+    public MenuEntryRef? Entry { get; set; }
+
+    [Parameter]
+    public EventCallback<(DropTarget To, bool Copy)> OnConfirmed { get; set; }
+
+    [Parameter]
+    public EventCallback OnCancelled { get; set; }
+
+    private static string Culture =>
+        System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_slots.Count == 0)
+        {
+            _slots = (await Status.GetAsync()).Slots;
+        }
+
+        if (!ReferenceEquals(Entry, _last))
+        {
+            _last = Entry;
+            _copy = false;
+
+            // Default to where it already is, so the form is a change from the
+            // current position rather than a blank to fill in.
+            _date = Entry?.Date ?? DateOnly.FromDateTime(DateTime.Now);
+            _slot = Entry?.Slot ?? _slots.FirstOrDefault()?.Key ?? string.Empty;
+        }
+    }
+
+    private void OnDateChanged(ChangeEventArgs args)
+    {
+        if (DateOnly.TryParse(args.Value?.ToString(), out var parsed))
+        {
+            _date = parsed;
+        }
+    }
+
+    private Task Confirm() => OnConfirmed.InvokeAsync((new DropTarget(_date, _slot), _copy));
+
+    private Task Cancel() => OnCancelled.InvokeAsync();
+}

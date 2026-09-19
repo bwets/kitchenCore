@@ -314,3 +314,109 @@
     z-index: 2;
   }
 }
+
+// Drag feedback.
+.menu-grid__cell.is-over {
+  // The drop target, called out while a drag is over it.
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+  background: var(--primary-container);
+}
+
+.menu-entry.is-dragging {
+  opacity: 0.35;
+}
+
+// While a drag is in progress, stop the page scrolling or selecting text under
+// the pointer -- particularly a finger, which would otherwise scroll the week.
+body.is-dragging {
+  touch-action: none;
+  user-select: none;
+  cursor: grabbing;
+}
+
+// The floating copy that follows the pointer. Created and positioned by
+// js/drag.js via transform, so it rides the compositor and keeps up with the
+// pointer instead of trailing a frame behind it.
+.drag-ghost {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 50;
+  pointer-events: none;
+  will-change: transform;
+  padding: $space-2 $space-3;
+  border-radius: $radius-sm;
+  background: var(--surface-container-highest);
+  color: var(--on-surface);
+  border: 1px solid var(--primary);
+  box-shadow: var(--shadow-2);
+  font-size: 0.85rem;
+  max-width: 14rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  &[hidden] {
+    display: none;
+  }
+
+  // Ctrl held: this will duplicate rather than move.
+  &.is-copy {
+    border-color: var(--marker-delivery);
+
+    &::after {
+      content: "+";
+      margin-left: $space-2;
+      color: var(--marker-delivery);
+      font-weight: 700;
+    }
+  }
+}
+
+// The whole column lights up for the day being dragged over: mid-drag, "which
+// day?" is the hard question, especially across several week bands. The exact
+// target cell is then marked more strongly inside it.
+.menu-grid__cell.is-over-column,
+.menu-grid__dayhead.is-over-column {
+  background: var(--surface-container-high);
+}
+
+.menu-grid__dayhead.is-over-column {
+  color: var(--on-surface);
+  font-weight: 650;
+}
+
+// Compact density, for the multi-week view. Only the row height and the type
+// scale change -- it is the same grid, so the slot alignment is untouched.
+.menu-grid--compact {
+  grid-template-rows: auto repeat(var(--slot-count), minmax(2.6rem, 1fr));
+
+  .menu-grid__dayhead {
+    padding: $space-1 $space-2;
+    font-size: 0.7rem;
+  }
+
+  .menu-grid__daynum { font-size: 0.85rem; }
+
+  .menu-grid__gutter { padding: $space-1; }
+
+  .menu-grid__gutter .slot-label {
+    padding: 2px $space-2;
+    font-size: 0.68rem;
+  }
+
+  .menu-grid__cell { padding: 2px; }
+
+  .menu-entry {
+    padding: $space-1 $space-2;
+    font-size: 0.78rem;
+    line-height: 1.2;
+  }
+
+  .menu-entry__title { -webkit-line-clamp: 2; }
+
+  .menu-entry__mark { display: none; }
+
+  .menu-cell--empty { min-height: 1.75rem; font-size: 0.85rem; }
+}

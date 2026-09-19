@@ -147,3 +147,72 @@
     color: var(--on-error-container);
   }
 }
+
+// The three-way drop choice. Laid out as a list of outcomes rather than a row of
+// buttons, so each one can say what it will actually do.
+.dialog--choice {
+  width: min(28rem, calc(100vw - 2rem));
+}
+
+.choices {
+  display: grid;
+  gap: $space-2;
+  margin-top: $space-4;
+}
+
+.choice {
+  display: block;
+  width: 100%;
+  min-height: 0;
+  padding: $space-3;
+  border: 1px solid var(--outline-variant);
+  border-radius: $radius-md;
+  background: var(--surface-container-low);
+  color: var(--on-surface);
+  text-align: left;
+
+  &:hover {
+    border-color: var(--primary);
+    background: var(--surface-container);
+  }
+
+  &__name {
+    display: block;
+    font-weight: 650;
+    font-size: 0.95rem;
+  }
+
+  &__what {
+    display: block;
+    margin-top: 2px;
+    color: var(--on-surface-variant);
+    font-size: 0.8rem;
+    line-height: 1.35;
+  }
+
+  &__steps {
+    margin: $space-2 0 0;
+    padding-left: $space-4;
+    color: var(--on-surface-variant);
+    font-size: 0.75rem;
+    line-height: 1.5;
+  }
+
+  // Destructive: it deletes the entry already there.
+  &--danger:hover {
+    border-color: var(--error);
+  }
+}
+
+.field--check {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+  margin-top: $space-4;
+  font-size: 0.9rem;
+
+  input {
+    width: 1.1rem;
+    height: 1.1rem;
+  }
+}

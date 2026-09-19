@@ -14,14 +14,15 @@
     hands it several week bands.
 *@
 
-<div class="menu-grid" style="@GridStyle()">
+<div class="menu-grid @(Compact ? "menu-grid--compact" : null)" style="@GridStyle()">
 
     @* Corner of the sticky gutter. *@
     <div class="menu-grid__corner"></div>
 
     @foreach (var day in Days)
     {
-        <div class="menu-grid__dayhead @(IsToday(day.Date) ? "is-today" : null)">
+        <div class="menu-grid__dayhead @(IsToday(day.Date) ? "is-today" : null)"
+             data-day-head="@day.Date.ToString("yyyy-MM-dd")">
             <span class="menu-grid__dayname">@day.Date.ToString("ddd")</span>
             <span class="menu-grid__daynum">@day.Date.Day</span>
         </div>
@@ -37,7 +38,9 @@
         {
             var cell = CellFor(day, slot.Key);
 
-            <div class="menu-grid__cell @(IsToday(day.Date) ? "is-today" : null)">
+            <div class="menu-grid__cell @(IsToday(day.Date) ? "is-today" : null)"
+                 data-drop-date="@day.Date.ToString("yyyy-MM-dd")"
+                 data-drop-slot="@slot.Key">
                 @if (cell is null || cell.IsEmpty)
                 {
                     <button type="button"
@@ -56,10 +59,19 @@
                             var index = i;
                             var entry = cell.Entries[index];
 
+                            @* The data-drag-* attributes are the whole contract with
+                               js/drag.js: it finds the handle, tracks the gesture and
+                               reports the drop. No pointer events cross into Blazor. *@
                             <button type="button"
                                     class="menu-entry @(entry.Status == EntryStatus.Requested ? "is-requested" : null)"
                                     title="@Tooltip(entry)"
-                                    @onclick="() => OnEdit.InvokeAsync(new MenuEntryRef(day.Date, slot.Key, index, entry))">
+                                    data-drag-date="@day.Date.ToString("yyyy-MM-dd")"
+                                    data-drag-slot="@slot.Key"
+                                    data-drag-index="@index"
+                                    data-drag-title="@entry.Title"
+                                    @onclick="() => OnEdit.InvokeAsync(new MenuEntryRef(day.Date, slot.Key, index, entry))"
+                                    @oncontextmenu="() => OnMoveMenu.InvokeAsync(new MenuEntryRef(day.Date, slot.Key, index, entry))"
+                                    @oncontextmenu:preventDefault="true">
                                 <span class="menu-entry__title">@entry.Title</span>
 
                                 @if (!string.IsNullOrWhiteSpace(entry.Notes))
@@ -118,6 +130,13 @@
     [Parameter, EditorRequired]
     public IReadOnlyList<SlotDefinition> Slots { get; set; } = [];
 
+    /// <summary>
+    /// Denser rows, for showing several weeks at once. Same grid and the same
+    /// alignment; only the row height and type scale change.
+    /// </summary>
+    [Parameter]
+    public bool Compact { get; set; }
+
     /// <summary>Shopping moments to draw across the days.</summary>
     [Parameter]
     public IReadOnlyList<DayMarker> Markers { get; set; } = [];
@@ -127,6 +146,14 @@
 
     [Parameter]
     public EventCallback<MenuEntryRef> OnEdit { get; set; }
+
+    /// <summary>
+    /// The non-drag route to the same thing, on right-click or long-press menu.
+    /// Dragging is not available to everyone -- keyboard users, screen readers,
+    /// anyone whose hands are full -- so moving must never depend on it.
+    /// </summary>
+    [Parameter]
+    public EventCallback<MenuEntryRef> OnMoveMenu { get; set; }
 
     private static string Culture =>
         System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;

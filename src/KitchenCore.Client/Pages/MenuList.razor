@@ -1,0 +1,260 @@
+@page "/menu/list"
+@implements IAsyncDisposable
+@inject MenuClient Menu
+@inject SystemStatusService Status
+@inject DragController Drag
+@inject IStringLocalizer<Strings> L
+
+@*
+    Titles only, grouped month then week.
+
+    The counterpart to the grid: there is no layout to preserve, so it can show a
+    long span at a glance, which makes it the fastest way to see what has actually
+    been planned over a season. Rows are drop targets too, using the same
+    DragController and the same collision dialog -- a move made here is the same
+    move as a drag in the grid, not a second implementation of it.
+*@
+
+<PageTitle>@L["List_Title"] · @L["AppName"]</PageTitle>
+
+<div class="week-bar">
+    <button type="button" class="week-bar__button" @onclick="() => ShiftAsync(-1)">‹</button>
+    <button type="button" class="week-bar__button" @onclick="GoToTodayAsync">@L["Week_Today"]</button>
+    <button type="button" class="week-bar__button" @onclick="() => ShiftAsync(1)">›</button>
+
+    <span class="week-bar__range">@_start.ToString("MMMM yyyy")</span>
+    <span class="week-bar__spacer"></span>
+
+    @if (_loading)
+    {
+        <span class="loading">@L["Loading"]</span>
+    }
+</div>
+
+@if (_conflict)
+{
+    <div class="issues">@L["Conflict"]</div>
+}
+
+<div class="panel">
+    @if (_range is null)
+    {
+        <p class="loading">@L["Loading"]</p>
+    }
+    else if (!_range.Days.Any(d => d.Cells.Any(c => !c.IsEmpty)))
+    {
+        <p class="muted">@L["List_Empty"]</p>
+    }
+    else
+    {
+        @foreach (var week in Weeks())
+        {
+            <section class="list-week">
+                <button type="button" class="list-week__head" @onclick="() => Toggle(week.Key)">
+                    <span class="list-week__chevron @(IsOpen(week.Key) ? "is-open" : null)" aria-hidden="true">›</span>
+                    <span>@WeekLabel(week)</span>
+                    <span class="list-week__count">@week.Sum(d => d.Cells.Sum(c => c.Entries.Count))</span>
+                </button>
+
+                @if (IsOpen(week.Key))
+                {
+                    <ul class="list-days">
+                        @foreach (var day in week.Where(d => d.Cells.Any(c => !c.IsEmpty)))
+                        {
+                            <li class="list-day">
+                                <span class="list-day__date @(IsToday(day.Date) ? "is-today" : null)">
+                                    @day.Date.ToString("ddd d")
+                                </span>
+
+                                <ul class="list-entries">
+                                    @foreach (var slot in _slots)
+                                    {
+                                        var cell = day.Cells.FirstOrDefault(c =>
+                                            string.Equals(c.Slot, slot.Key, StringComparison.OrdinalIgnoreCase));
+
+                                        <li class="list-entry @SlotTone.CssClass(slot.Key)"
+                                            data-drop-date="@day.Date.ToString("yyyy-MM-dd")"
+                                            data-drop-slot="@slot.Key">
+
+                                            <span class="list-entry__slot">@slot.Label(Culture)</span>
+
+                                            @if (cell is null || cell.IsEmpty)
+                                            {
+                                                <span class="list-entry__empty">—</span>
+                                            }
+                                            else
+                                            {
+                                                @for (var i = 0; i < cell.Entries.Count; i++)
+                                                {
+                                                    var index = i;
+                                                    var entry = cell.Entries[index];
+                                                    var reference = new MenuEntryRef(day.Date, slot.Key, index, entry);
+
+                                                    <button type="button" class="list-entry__title"
+                                                            data-drag-date="@day.Date.ToString("yyyy-MM-dd")"
+                                                            data-drag-slot="@slot.Key"
+                                                            data-drag-index="@index"
+                                                            data-drag-title="@entry.Title">
+                                                        @entry.Title
+                                                    </button>
+                                                }
+
+                                                @if (cell.IsDuplicated)
+                                                {
+                                                    <span class="menu-cell__flag">@L["Duplicate_Short"]</span>
+                                                }
+                                            }
+                                        </li>
+                                    }
+                                </ul>
+                            </li>
+                        }
+                    </ul>
+                }
+            </section>
+        }
+    }
+</div>
+
+<DropChoiceDialog Request="@_pendingDrop"
+                  OnChosen="OnDropChoiceAsync"
+                  OnCancelled="@(() => _pendingDrop = null)" />
+
+@code {
+    private MenuRangeResponse? _range;
+    private IReadOnlyList<SlotDefinition> _slots = [];
+    private DateOnly _start;
+    private DayOfWeek _weekStart = DayOfWeek.Monday;
+    private bool _loading = true;
+    private bool _conflict;
+    private DropRequest? _pendingDrop;
+    private readonly HashSet<DateOnly> _collapsed = [];
+
+    private static string Culture =>
+        System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+
+    private static bool IsToday(DateOnly date) => date == DateOnly.FromDateTime(DateTime.Now);
+
+    protected override async Task OnInitializedAsync()
+    {
+        Drag.Resolve = ResolveEntry;
+        Drag.Dropped += OnDroppedAsync;
+        await Drag.AttachAsync();
+
+        var status = await Status.GetAsync();
+        _slots = status.Slots;
+        _weekStart = status.WeekStart;
+
+        var today = DateOnly.FromDateTime(DateTime.Now);
+        _start = new DateOnly(today.Year, today.Month, 1);
+
+        await LoadAsync();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        Drag.Dropped -= OnDroppedAsync;
+        await ValueTask.CompletedTask;
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _conflict = false;
+
+        // Whole weeks around the month, so a week straddling the boundary is not
+        // shown cut in half.
+        var from = StartOfWeek(_start);
+        var to = StartOfWeek(_start.AddMonths(1).AddDays(-1)).AddDays(6);
+
+        _range = await Menu.RangeAsync(from, to);
+        _loading = false;
+    }
+
+    private IEnumerable<IGrouping<DateOnly, MenuDay>> Weeks() =>
+        (_range?.Days ?? []).GroupBy(d => StartOfWeek(d.Date));
+
+    private bool IsOpen(DateOnly week) => !_collapsed.Contains(week);
+
+    private void Toggle(DateOnly week)
+    {
+        if (!_collapsed.Add(week))
+        {
+            _collapsed.Remove(week);
+        }
+    }
+
+    private async Task ShiftAsync(int months)
+    {
+        _start = _start.AddMonths(months);
+        await LoadAsync();
+    }
+
+    private async Task GoToTodayAsync()
+    {
+        var today = DateOnly.FromDateTime(DateTime.Now);
+        _start = new DateOnly(today.Year, today.Month, 1);
+        await LoadAsync();
+    }
+
+    private async Task OnDroppedAsync(MenuEntryRef from, DropTarget to, bool copy)
+    {
+        if (IsOccupied(to))
+        {
+            _pendingDrop = new DropRequest(from, to, copy);
+            StateHasChanged();
+            return;
+        }
+
+        await ApplyMoveAsync(from, to, copy, mode: null);
+        StateHasChanged();
+    }
+
+    /// <summary>Finds the entry a drop refers to in the data now on screen.</summary>
+    private MenuEntryRef? ResolveEntry(DateOnly date, string slot, int index)
+    {
+        var cell = _range?.Days
+            .FirstOrDefault(d => d.Date == date)?
+            .Cells.FirstOrDefault(c => string.Equals(c.Slot, slot, StringComparison.OrdinalIgnoreCase));
+
+        return cell is not null && index >= 0 && index < cell.Entries.Count
+            ? new MenuEntryRef(date, slot, index, cell.Entries[index])
+            : null;
+    }
+
+    private async Task OnDropChoiceAsync(DropMode mode)
+    {
+        if (_pendingDrop is { } pending)
+        {
+            _pendingDrop = null;
+            await ApplyMoveAsync(pending.From, pending.To, pending.Copy, mode);
+        }
+    }
+
+    private async Task ApplyMoveAsync(MenuEntryRef from, DropTarget to, bool copy, DropMode? mode)
+    {
+        var result = await Menu.MoveAsync(from, to, copy, mode, _range?.Version);
+
+        if (result.Conflict)
+        {
+            _conflict = true;
+        }
+
+        await LoadAsync();
+    }
+
+    private bool IsOccupied(DropTarget target) =>
+        _range?.Days
+            .FirstOrDefault(d => d.Date == target.Date)?
+            .Cells.FirstOrDefault(c => string.Equals(c.Slot, target.Slot, StringComparison.OrdinalIgnoreCase))
+            is { IsEmpty: false };
+
+    private static string WeekLabel(IGrouping<DateOnly, MenuDay> week) =>
+        $"{week.Key:d MMM} – {week.Key.AddDays(6):d MMM}";
+
+    private DateOnly StartOfWeek(DateOnly date)
+    {
+        var offset = ((int)date.DayOfWeek - (int)_weekStart + 7) % 7;
+        return date.AddDays(-offset);
+    }
+}

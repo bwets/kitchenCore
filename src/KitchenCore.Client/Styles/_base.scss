@@ -10,6 +10,24 @@ html {
   -webkit-text-size-adjust: 100%;
 }
 
+html {
+  // The page itself is the scroll container, so the sticky header works and the
+  // browser's own scrollbar appears where people expect it.
+  height: auto;
+  overflow-y: auto;
+}
+
+// 'html body' rather than 'body' on purpose. Fluent v5 injects an ADOPTED
+// stylesheet at runtime containing 'body { height: 100dvh; overflow: hidden }'
+// -- it assumes an app-shell where some inner region scrolls. Adopted sheets are
+// author-level and applied after ours, so they win every tie; the extra element
+// in the selector outranks them without resorting to !important.
+html body {
+  height: auto;
+  min-height: 100dvh;
+  overflow-y: visible;
+}
+
 body {
   margin: 0;
   font-family: "Segoe UI Variable", "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;

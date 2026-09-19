@@ -75,4 +75,51 @@
   <data name="Cancel" xml:space="preserve"><value>Cancel</value></data>
   <data name="Conflict" xml:space="preserve"><value>Someone else changed this week. Close and reopen to see their version.</value></data>
   <data name="SaveFailed" xml:space="preserve"><value>That could not be saved.</value></data>
+  <data name="Drop_Title" xml:space="preserve"><value>That slot is taken</value></data>
+  <data name="Drop_Description" xml:space="preserve"><value>Where should "{0}" go on {1}?</value></data>
+  <data name="Drop_Insert" xml:space="preserve"><value>Keep both</value></data>
+  <data name="Drop_InsertWhat" xml:space="preserve"><value>Leaves two entries in the slot, flagged until you resolve it.</value></data>
+  <data name="Drop_Shift" xml:space="preserve"><value>Shift the rest along</value></data>
+  <data name="Drop_ShiftWhat" xml:space="preserve"><value>Pushes what is there to the next day, and so on until a free day.</value></data>
+  <data name="Drop_Overwrite" xml:space="preserve"><value>Replace</value></data>
+  <data name="Drop_OverwriteWhat" xml:space="preserve"><value>Deletes what is there now.</value></data>
+  <data name="Drop_CopyBadge" xml:space="preserve"><value>copy</value></data>
+  <data name="Move_Title" xml:space="preserve"><value>Move to</value></data>
+  <data name="Move_Day" xml:space="preserve"><value>Day</value></data>
+  <data name="Move_Slot" xml:space="preserve"><value>Slot</value></data>
+  <data name="Move_Copy" xml:space="preserve"><value>Copy instead of move</value></data>
+  <data name="Move_Go" xml:space="preserve"><value>Move</value></data>
+  <data name="MultiWeek_Title" xml:space="preserve"><value>Multi-week</value></data>
+  <data name="MultiWeek_Count" xml:space="preserve"><value>Weeks</value></data>
+  <data name="List_Title" xml:space="preserve"><value>List</value></data>
+  <data name="List_Empty" xml:space="preserve"><value>Nothing planned this month.</value></data>
+  <data name="Nav_Admin" xml:space="preserve"><value>Devices</value></data>
+  <data name="Access_Title" xml:space="preserve"><value>Request access</value></data>
+  <data name="Access_Intro" xml:space="preserve"><value>Tell the family who this device is. Someone will approve it.</value></data>
+  <data name="Access_Name" xml:space="preserve"><value>Name for this device</value></data>
+  <data name="Access_Code" xml:space="preserve"><value>Setup code</value></data>
+  <data name="Access_CodeHint" xml:space="preserve"><value>Only needed for the very first device.</value></data>
+  <data name="Access_Submit" xml:space="preserve"><value>Ask for access</value></data>
+  <data name="Access_Failed" xml:space="preserve"><value>That request could not be sent.</value></data>
+  <data name="Access_PendingTitle" xml:space="preserve"><value>Waiting for approval</value></data>
+  <data name="Access_PendingBody" xml:space="preserve"><value>"{0}" has asked for access. An admin needs to approve it.</value></data>
+  <data name="Access_Recheck" xml:space="preserve"><value>Check again</value></data>
+  <data name="Access_Forget" xml:space="preserve"><value>Use another name</value></data>
+  <data name="Access_AlreadyTitle" xml:space="preserve"><value>Already approved</value></data>
+  <data name="Access_AlreadyBody" xml:space="preserve"><value>This device is approved as "{0}".</value></data>
+  <data name="Access_Continue" xml:space="preserve"><value>Continue</value></data>
+  <data name="Admin_Title" xml:space="preserve"><value>Devices</value></data>
+  <data name="Admin_Denied" xml:space="preserve"><value>Only an admin can manage devices.</value></data>
+  <data name="Admin_None" xml:space="preserve"><value>No devices yet.</value></data>
+  <data name="Admin_Device" xml:space="preserve"><value>Device</value></data>
+  <data name="Admin_Menu" xml:space="preserve"><value>Menu</value></data>
+  <data name="Admin_Shopping" xml:space="preserve"><value>Shopping</value></data>
+  <data name="Admin_Approve" xml:space="preserve"><value>Approve</value></data>
+  <data name="Admin_Revoke" xml:space="preserve"><value>Revoke</value></data>
+  <data name="Admin_Pending" xml:space="preserve"><value>pending</value></data>
+  <data name="Admin_IsAdmin" xml:space="preserve"><value>admin</value></data>
+  <data name="Role_None" xml:space="preserve"><value>No access</value></data>
+  <data name="Role_Viewer" xml:space="preserve"><value>View</value></data>
+  <data name="Role_Requestor" xml:space="preserve"><value>Request</value></data>
+  <data name="Role_Editor" xml:space="preserve"><value>Edit</value></data>
 </root>

@@ -88,6 +88,56 @@ public sealed class MenuClient(HttpClient http)
         return new MenuWriteOutcome { Success = true };
     }
 
+    /// <summary>
+    /// Moves or copies an entry. <paramref name="mode"/> is required only when the
+    /// target is occupied -- a drop on a free slot asks nothing.
+    /// </summary>
+    public Task<MenuWriteOutcome> MoveAsync(
+        MenuEntryRef from,
+        DropTarget to,
+        bool copy,
+        DropMode? mode,
+        string? version = null,
+        CancellationToken cancellationToken = default)
+    {
+        var request = new HttpRequestMessage(HttpMethod.Post, "api/menu/move")
+        {
+            Content = JsonContent.Create(Body(from, to, copy, mode)),
+        };
+
+        return SendAsync(request, version, cancellationToken);
+    }
+
+    /// <summary>What a shift-right would cascade, so the dialog can show it first.</summary>
+    public async Task<ShiftPreview> PreviewMoveAsync(
+        MenuEntryRef from,
+        DropTarget to,
+        CancellationToken cancellationToken = default)
+    {
+        var response = await http.PostAsJsonAsync(
+            "api/menu/move/preview",
+            Body(from, to, copy: false, DropMode.ShiftRight),
+            cancellationToken);
+
+        return response.IsSuccessStatusCode
+            ? await response.Content.ReadFromJsonAsync<ShiftPreview>(cancellationToken) ?? new ShiftPreview()
+            : new ShiftPreview();
+    }
+
+    private static object Body(MenuEntryRef from, DropTarget to, bool copy, DropMode? mode) => new
+    {
+        from = new
+        {
+            date = Iso(from.Date),
+            slot = from.Slot,
+            entryIndex = from.Index,
+        },
+        toDate = Iso(to.Date),
+        toSlot = to.Slot,
+        copy,
+        mode,
+    };
+
     private static string Iso(DateOnly date) => date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
 }
 

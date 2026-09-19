@@ -1,4 +1,4 @@
-@page "/menu/week"
+@page "/menu/multi-week"
 @implements IAsyncDisposable
 @inject DragController Drag
 @inject MenuClient Menu
@@ -6,15 +6,34 @@
 @inject IShoppingSchedule Shopping
 @inject IStringLocalizer<Strings> L
 
-<PageTitle>@L["Week_Title"] · @L["AppName"]</PageTitle>
+@*
+    Several weeks at once, for moving meals around.
+
+    Reuses MenuGrid one week band at a time rather than rendering one long grid:
+    the slot rows have to stay aligned *within* a week, but a band per week keeps
+    the day-of-week columns lined up down the page, which is what makes dragging
+    "the same dinner, a week later" straightforward.
+*@
+
+<PageTitle>@L["MultiWeek_Title"] · @L["AppName"]</PageTitle>
 
 <div class="week-bar">
-    <button type="button" class="week-bar__button" @onclick="() => ShiftAsync(-7)" title="@L["Week_Previous"]">‹</button>
+    <button type="button" class="week-bar__button" @onclick="() => ShiftAsync(-7)">‹</button>
     <button type="button" class="week-bar__button" @onclick="GoToTodayAsync">@L["Week_Today"]</button>
-    <button type="button" class="week-bar__button" @onclick="() => ShiftAsync(7)" title="@L["Week_Next"]">›</button>
+    <button type="button" class="week-bar__button" @onclick="() => ShiftAsync(7)">›</button>
 
     <span class="week-bar__range">@RangeLabel()</span>
     <span class="week-bar__spacer"></span>
+
+    <label class="week-bar__weeks">
+        @L["MultiWeek_Count"]
+        <select class="field__input field__input--inline" @onchange="OnWeekCountChanged">
+            @foreach (var option in new[] { 2, 4, 6 })
+            {
+                <option value="@option" selected="@(option == _weeks)">@option</option>
+            }
+        </select>
+    </label>
 
     @if (_loading)
     {
@@ -27,28 +46,23 @@
     <div class="issues">@L["Conflict"]</div>
 }
 
-@if (_range is { Issues.Count: > 0 })
-{
-    @* Problems in the files are surfaced, never thrown. A hand-edited menu that
-       cannot be parsed must still leave the rest of the week usable. *@
-    <div class="issues">
-        <strong>@L["Issues_Title"]</strong>
-        <ul>
-            @foreach (var issue in _range.Issues)
-            {
-                <li>@issue.Message</li>
-            }
-        </ul>
-    </div>
-}
+<div class="week-bands">
+    @foreach (var band in Bands())
+    {
+        <section class="week-band">
+            <h2 class="week-band__label">@BandLabel(band)</h2>
 
-<div class="menu-grid-scroll">
-    <MenuGrid Days="@(_range?.Days ?? [])"
-              Slots="@_slots"
-              Markers="@_markers"
-              OnCreate="OnCreate"
-              OnEdit="OnEdit"
-              OnMoveMenu="@(e => _moving = e)" />
+            <div class="menu-grid-scroll">
+                <MenuGrid Days="@band"
+                          Compact="true"
+                          Slots="@_slots"
+                          Markers="@_markers"
+                          OnCreate="OnCreate"
+                          OnEdit="@(e => _editing = e)"
+                                      OnMoveMenu="@(e => _moving = e)" />
+            </div>
+        </section>
+    }
 </div>
 
 <EntryDialog Target="@_editing"
@@ -56,7 +70,6 @@
              OnSaved="OnSavedAsync"
              OnCancelled="@(() => _editing = null)" />
 
-@* A drop on an occupied slot always asks; a drop on a free one never does. *@
 <DropChoiceDialog Request="@_pendingDrop"
                   OnChosen="OnDropChoiceAsync"
                   OnCancelled="@(() => _pendingDrop = null)" />
@@ -70,6 +83,7 @@
     private IReadOnlyList<SlotDefinition> _slots = [];
     private List<DayMarker> _markers = [];
     private DateOnly _start;
+    private int _weeks = 4;
     private bool _loading = true;
     private bool _conflict;
     private MenuEntryRef? _editing;
@@ -96,20 +110,36 @@
         _loading = true;
         _conflict = false;
 
-        var end = _start.AddDays(6);
-        _range = await Menu.RangeAsync(_start, end);
+        _range = await Menu.RangeAsync(_start, _start.AddDays(_weeks * 7 - 1));
 
-        // Markers come from the shopping schedule, not the menu files: they are
-        // moments in the day rather than meals.
         _markers = [];
-
         if (await Shopping.NextTripAsync() is { } trip)
         {
-            _markers.Add(new DayMarker(trip.Order.At, "order", $"{L["Shopping_Order"]} · {trip.Order.At:HH:mm}"));
-            _markers.Add(new DayMarker(trip.Delivery.At, "delivery", $"{L["Shopping_Delivery"]} · {trip.Delivery.At:HH:mm}"));
+            _markers.Add(new DayMarker(trip.Order.At, "order", L["Shopping_Order"]));
+            _markers.Add(new DayMarker(trip.Delivery.At, "delivery", L["Shopping_Delivery"]));
         }
 
         _loading = false;
+    }
+
+    /// <summary>Splits the loaded range into one list of days per week.</summary>
+    private IEnumerable<List<MenuDay>> Bands()
+    {
+        var days = _range?.Days ?? [];
+
+        for (var offset = 0; offset + 7 <= days.Count; offset += 7)
+        {
+            yield return [.. days.Skip(offset).Take(7)];
+        }
+    }
+
+    private async Task OnWeekCountChanged(ChangeEventArgs args)
+    {
+        if (int.TryParse(args.Value?.ToString(), out var weeks))
+        {
+            _weeks = weeks;
+            await LoadAsync();
+        }
     }
 
     private async Task ShiftAsync(int days)
@@ -125,15 +155,8 @@
     }
 
     private void OnCreate((DateOnly Date, string Slot) target) =>
-        // Index 0 on an empty cell: the store appends when the index is past the end.
         _editing = new MenuEntryRef(target.Date, target.Slot, 0, new MenuEntry { Title = string.Empty });
 
-    private void OnEdit(MenuEntryRef entry) => _editing = entry;
-
-    /// <summary>
-    /// A drop landed. If the target is free this just moves; if it is taken the
-    /// user is asked first, because there is no silent overwrite here.
-    /// </summary>
     private async Task OnDroppedAsync(MenuEntryRef from, DropTarget to, bool copy)
     {
         // A free slot never asks. An occupied one always does.
@@ -184,7 +207,6 @@
 
         _moving = null;
 
-        // Same path as a drag, so the fallback cannot drift from the gesture.
         if (IsOccupied(move.To))
         {
             _pendingDrop = new DropRequest(entry, move.To, move.Copy);
@@ -206,35 +228,27 @@
         await LoadAsync();
     }
 
-    /// <summary>Whether the target already holds something, which is what makes a drop a question.</summary>
-    private bool IsOccupied(DropTarget target) =>
-        _range?.Days
-            .FirstOrDefault(d => d.Date == target.Date)?
-            .Cells.FirstOrDefault(c => string.Equals(c.Slot, target.Slot, StringComparison.OrdinalIgnoreCase))
-            is { IsEmpty: false };
-
     private async Task OnSavedAsync()
     {
         _editing = null;
         await LoadAsync();
     }
 
+    private bool IsOccupied(DropTarget target) =>
+        _range?.Days
+            .FirstOrDefault(d => d.Date == target.Date)?
+            .Cells.FirstOrDefault(c => string.Equals(c.Slot, target.Slot, StringComparison.OrdinalIgnoreCase))
+            is { IsEmpty: false };
+
     private string RangeLabel()
     {
-        var end = _start.AddDays(6);
-
-        // Only repeat the month and year when the week actually straddles one.
-        if (_start.Month == end.Month)
-        {
-            return $"{_start.Day} – {end:d MMMM yyyy}";
-        }
-
-        return _start.Year == end.Year
-            ? $"{_start:d MMM} – {end:d MMM yyyy}"
-            : $"{_start:d MMM yyyy} – {end:d MMM yyyy}";
+        var end = _start.AddDays(_weeks * 7 - 1);
+        return $"{_start:d MMM} – {end:d MMM yyyy}";
     }
 
-    /// <summary>Rolls a date back to the configured first day of the week.</summary>
+    private static string BandLabel(List<MenuDay> band) =>
+        band.Count == 0 ? string.Empty : $"{band[0].Date:d MMM} – {band[^1].Date:d MMM}";
+
     private static DateOnly StartOfWeek(DateOnly date, DayOfWeek weekStart)
     {
         var offset = ((int)date.DayOfWeek - (int)weekStart + 7) % 7;

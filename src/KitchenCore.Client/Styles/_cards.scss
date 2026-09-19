@@ -162,3 +162,213 @@
   padding: 0;
   overflow: hidden;
 }
+
+// Multi-week: one band per week, so day-of-week columns line up down the page.
+//
+// The page itself scrolls, not an inner box: a nested scroller meant the page
+// stayed fixed and the outer scrollbar never appeared, which is worse on a
+// phone and surprising everywhere. The app header is sticky, so it stays visible
+// as the weeks go past, and each week's label sticks just beneath it.
+.week-bands {
+  display: grid;
+  gap: $space-4;
+}
+
+.week-band__label {
+  position: sticky;
+  top: var(--header-height);
+  z-index: 4;
+  margin: 0 0 $space-1;
+  padding: $space-1 $space-2;
+  border-radius: $radius-xs;
+  background: var(--surface);
+  color: var(--on-surface-variant);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.week-bar__weeks {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-2;
+  color: var(--on-surface-variant);
+  font-size: 0.85rem;
+}
+
+.field__input--inline {
+  width: auto;
+  min-height: 2.25rem;
+  padding: 0 $space-2;
+}
+
+// The list view: titles only, grouped by week.
+.list-week + .list-week {
+  margin-top: $space-4;
+}
+
+.list-week__head {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+  width: 100%;
+  min-height: 2.5rem;
+  padding: $space-2;
+  border: 0;
+  border-radius: $radius-sm;
+  background: var(--surface-container-low);
+  color: var(--on-surface);
+  font-size: 0.85rem;
+  font-weight: 650;
+  text-align: left;
+  text-transform: capitalize;
+
+  &:hover { background: var(--surface-container); }
+}
+
+.list-week__chevron {
+  display: inline-block;
+  transition: transform 120ms ease;
+
+  &.is-open { transform: rotate(90deg); }
+}
+
+.list-week__count {
+  margin-left: auto;
+  padding: 0 $space-2;
+  border-radius: $radius-full;
+  background: var(--surface-container-high);
+  color: var(--on-surface-variant);
+  font-size: 0.75rem;
+}
+
+.list-days,
+.list-entries {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.list-day {
+  display: flex;
+  gap: $space-3;
+  padding: $space-2 0;
+  border-bottom: 1px solid var(--outline-variant);
+
+  &:last-child { border-bottom: 0; }
+}
+
+.list-day__date {
+  flex: none;
+  width: 4.5rem;
+  padding-top: 2px;
+  color: var(--on-surface-variant);
+  font-size: 0.8rem;
+  text-transform: capitalize;
+
+  &.is-today {
+    color: var(--primary);
+    font-weight: 700;
+  }
+}
+
+.list-entries {
+  flex: 1 1 auto;
+  display: grid;
+  gap: 2px;
+}
+
+.list-entry {
+  display: flex;
+  align-items: baseline;
+  gap: $space-3;
+  padding: $space-1 $space-2;
+  border-radius: $radius-xs;
+  font-size: 0.9rem;
+
+  &.is-over {
+    outline: 2px solid var(--primary);
+    background: var(--primary-container);
+  }
+
+  &__slot {
+    flex: none;
+    width: 4.5rem;
+    color: var(--slot-accent);
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  &__empty { color: var(--outline); }
+
+  &__title {
+    min-height: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+
+    & + & {
+      padding-left: $space-2;
+      border-left: 2px solid var(--error);
+    }
+  }
+}
+
+.panel--narrow {
+  max-width: 30rem;
+  margin: 0 auto;
+}
+
+// Device administration.
+.devices {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+
+  th {
+    padding: $space-2;
+    border-bottom: 1px solid var(--outline-variant);
+    color: var(--on-surface-variant);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-align: left;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  td {
+    padding: $space-2;
+    border-bottom: 1px solid var(--outline-variant);
+    vertical-align: middle;
+  }
+
+  tr.is-pending {
+    background: var(--tertiary-container);
+    color: var(--on-tertiary-container);
+  }
+
+  &__name {
+    display: block;
+    font-weight: 600;
+  }
+
+  &__meta {
+    display: flex;
+    align-items: center;
+    gap: $space-2;
+    color: var(--on-surface-variant);
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 0.7rem;
+  }
+
+  &__actions {
+    display: flex;
+    gap: $space-2;
+    justify-content: flex-end;
+  }
+}

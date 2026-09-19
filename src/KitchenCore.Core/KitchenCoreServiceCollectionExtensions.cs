@@ -27,6 +27,7 @@ public static class KitchenCoreServiceCollectionExtensions
         services.AddSingleton<GitCommandRunner>();
         services.AddSingleton<GitRepositoryDetector>();
         services.AddSingleton<MenuStore>();
+        services.AddSingleton<DeviceStore>();
 
         return services;
     }

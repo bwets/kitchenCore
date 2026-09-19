@@ -164,6 +164,153 @@ public sealed class MenuStore(KitchenPaths paths, AppConfigLoader config)
             return slots;
         }, cancellationToken);
 
+    /// <summary>
+    /// Moves or copies an entry, resolving a collision with the mode the user
+    /// picked. A shift-right cascade can cross a month or a year, so this writes
+    /// every affected shard together rather than one at a time -- a half-applied
+    /// cascade would leave the menu in a state nobody chose.
+    /// </summary>
+    public async Task<MenuMoveResult> MoveAsync(
+        DateOnly fromDate,
+        string fromSlot,
+        int fromIndex,
+        DateOnly toDate,
+        string toSlot,
+        bool copy = false,
+        DropMode? mode = null,
+        string? expectedVersion = null,
+        CancellationToken cancellationToken = default)
+    {
+        // Load wide enough to contain both ends plus whatever a cascade reaches.
+        var from = fromDate < toDate ? fromDate : toDate;
+        var to = (fromDate > toDate ? fromDate : toDate).AddDays(60);
+
+        var index = MenuShardIndex.Load(paths.MenuRoot, from, to);
+
+        if (expectedVersion is not null && expectedVersion != index.Version)
+        {
+            return new MenuMoveResult { Success = false, Conflict = true, Error = "The menu changed on disk." };
+        }
+
+        var days = index.Range(from, to).ToList();
+        var plan = DropResolver.Resolve(days, fromDate, fromSlot, fromIndex, toDate, toSlot, copy, mode);
+
+        if (!plan.Ok)
+        {
+            return new MenuMoveResult { Success = false, Error = plan.Error };
+        }
+
+        // Work out which dates changed, so untouched shards are left alone.
+        var before = days.ToDictionary(d => d.Date, Describe);
+        var after = plan.Days.ToDictionary(d => d.Date, Describe);
+
+        var touched = before.Keys.Union(after.Keys)
+            .Where(date => before.GetValueOrDefault(date) != after.GetValueOrDefault(date))
+            .ToList();
+
+        if (touched.Count == 0)
+        {
+            return new MenuMoveResult { Success = true, Version = index.Version, Steps = plan.Steps };
+        }
+
+        var byFile = touched
+            .GroupBy(date => index.TargetFileFor(date, paths.MenuRoot))
+            .ToList();
+
+        var gates = byFile
+            .Select(group => group.Key)
+            .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
+            .Select(LockFor)
+            .ToList();
+
+        // Locks are taken in a stable path order so two concurrent moves touching
+        // the same pair of shards cannot deadlock against each other.
+        foreach (var gate in gates)
+        {
+            await gate.WaitAsync(cancellationToken);
+        }
+
+        try
+        {
+            var writer = new MenuYamlWriter(config.Current.OrderedSlots);
+
+            foreach (var group in byFile)
+            {
+                var file = File.Exists(group.Key)
+                    ? MenuYamlReader.Read(group.Key, await File.ReadAllTextAsync(group.Key, cancellationToken))
+                    : null;
+
+                var year = file?.Year is > 0 ? file.Year : group.First().Year;
+                var contents = file?.Days.ToList() ?? [];
+
+                foreach (var date in group)
+                {
+                    var updated = plan.Days.FirstOrDefault(d => d.Date == date);
+                    var position = contents.FindIndex(d => d.Date == date);
+
+                    if (updated is null || updated.Slots.Count == 0)
+                    {
+                        if (position >= 0)
+                        {
+                            contents.RemoveAt(position);
+                        }
+
+                        continue;
+                    }
+
+                    if (position >= 0)
+                    {
+                        contents[position] = updated;
+                    }
+                    else
+                    {
+                        contents.Add(updated);
+                    }
+                }
+
+                await WriteAtomicAsync(group.Key, writer.Write(year, contents), cancellationToken);
+            }
+        }
+        catch (IOException ex)
+        {
+            return new MenuMoveResult { Success = false, Error = ex.Message };
+        }
+        finally
+        {
+            foreach (var gate in gates)
+            {
+                gate.Release();
+            }
+        }
+
+        return new MenuMoveResult
+        {
+            Success = true,
+            Version = MenuShardIndex.Load(paths.MenuRoot, from, to).Version,
+            Steps = plan.Steps,
+        };
+    }
+
+    /// <summary>
+    /// What a shift-right at this target would push, without writing anything.
+    /// Lets the dialog say "this also moves Thursday's chili to Friday" before
+    /// the user agrees to it.
+    /// </summary>
+    public ShiftPreview PreviewMove(DateOnly fromDate, string fromSlot, int fromIndex, DateOnly toDate, string toSlot)
+    {
+        var from = fromDate < toDate ? fromDate : toDate;
+        var to = (fromDate > toDate ? fromDate : toDate).AddDays(60);
+
+        var days = MenuShardIndex.Load(paths.MenuRoot, from, to).Range(from, to).ToList();
+        var plan = DropResolver.Resolve(days, fromDate, fromSlot, fromIndex, toDate, toSlot, copy: false, DropMode.ShiftRight);
+
+        return new ShiftPreview { Steps = plan.Steps };
+    }
+
+    /// <summary>Cheap comparable form of a day, to spot which dates a plan changed.</summary>
+    private static string Describe(MenuDayRecord day) =>
+        string.Join('|', day.Slots.Select(s => $"{s.Slot}:{s.Entry.Title}:{s.Entry.Notes}:{s.Entry.Status}"));
+
     private async Task<MenuWriteResult> MutateAsync(
         DateOnly date,
         string? expectedVersion,
@@ -248,4 +395,19 @@ public sealed class MenuStore(KitchenPaths paths, AppConfigLoader config)
             return gate;
         }
     }
+}
+
+/// <summary>Outcome of a move, including the cascade it performed.</summary>
+public sealed record MenuMoveResult
+{
+    public required bool Success { get; init; }
+
+    public string? Version { get; init; }
+
+    public bool Conflict { get; init; }
+
+    public string? Error { get; init; }
+
+    /// <summary>The shift-right cascade, if there was one.</summary>
+    public IReadOnlyList<ShiftStep> Steps { get; init; } = [];
 }

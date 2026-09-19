@@ -57,6 +57,51 @@ public static class MenuEndpoints
             return ToResult(result);
         });
 
+        // Dropping on a free slot needs no question. Dropping on an occupied one
+        // carries the answer the user gave: insert, shift right, or overwrite.
+        menu.MapPost("/move", async (MenuStore store, MoveRequest request, HttpContext http) =>
+        {
+            var result = await store.MoveAsync(
+                request.From.Date ?? default,
+                request.From.Slot ?? string.Empty,
+                request.From.EntryIndex,
+                request.ToDate,
+                request.ToSlot,
+                request.Copy,
+                request.Mode,
+                IfMatch(http),
+                http.RequestAborted);
+
+            if (result.Conflict)
+            {
+                return Results.Problem(
+                    title: "The menu changed since you loaded it.",
+                    detail: result.Error,
+                    statusCode: StatusCodes.Status412PreconditionFailed);
+            }
+
+            if (!result.Success)
+            {
+                return Results.BadRequest(new { error = result.Error });
+            }
+
+            return Results.Ok(new { version = result.Version, steps = result.Steps });
+        });
+
+        // What a shift-right would cascade, so the dialog can show it before the
+        // user commits to moving three other meals.
+        menu.MapPost("/move/preview", (MenuStore store, MoveRequest request) =>
+        {
+            var preview = store.PreviewMove(
+                request.From.Date ?? default,
+                request.From.Slot ?? string.Empty,
+                request.From.EntryIndex,
+                request.ToDate,
+                request.ToSlot);
+
+            return Results.Ok(preview);
+        });
+
         return app;
     }
 

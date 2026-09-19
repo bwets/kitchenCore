@@ -1,0 +1,94 @@
+@page "/access"
+@inject AuthService Auth
+@inject NavigationManager Nav
+@inject IStringLocalizer<Strings> L
+
+@*
+    Asking for access.
+
+    No password and no account: type a name, the device gets a token, and an
+    admin approves it. The name is for the admin's benefit -- it is what tells
+    them whether the thing asking is the kitchen tablet or a stranger.
+*@
+
+<PageTitle>@L["Access_Title"] · @L["AppName"]</PageTitle>
+
+<div class="panel panel--narrow">
+    @if (Auth.Identity.Approved)
+    {
+        <h1>@L["Access_AlreadyTitle"]</h1>
+        <p class="muted">@string.Format(L["Access_AlreadyBody"], Auth.Identity.Name)</p>
+        <a class="button button--primary" href="">@L["Access_Continue"]</a>
+    }
+    else if (Auth.Identity.Known)
+    {
+        @* Registered and waiting. This is the normal state between asking and
+           being approved, not an error. *@
+        <h1>@L["Access_PendingTitle"]</h1>
+        <p class="muted">@string.Format(L["Access_PendingBody"], Auth.Identity.Name)</p>
+
+        <footer class="dialog__foot">
+            <button type="button" class="button" @onclick="Auth.RefreshAsync">@L["Access_Recheck"]</button>
+            <span class="dialog__spacer"></span>
+            <button type="button" class="button" @onclick="Auth.SignOutAsync">@L["Access_Forget"]</button>
+        </footer>
+    }
+    else
+    {
+        <h1>@L["Access_Title"]</h1>
+        <p class="muted">@L["Access_Intro"]</p>
+
+        <label class="field">
+            <span class="field__label">@L["Access_Name"]</span>
+            <input class="field__input" value="@_name"
+                   @oninput="e => _name = e.Value?.ToString() ?? string.Empty" />
+        </label>
+
+        @if (Auth.NeedsBootstrap)
+        {
+            @* Only while no admin exists. Somebody has to be able to approve the
+               others, and there is nobody to approve the first of them. *@
+            <label class="field">
+                <span class="field__label">@L["Access_Code"]</span>
+                <input class="field__input" type="password" value="@_code"
+                       @oninput="e => _code = e.Value?.ToString() ?? string.Empty" />
+                <span class="field__hint">@L["Access_CodeHint"]</span>
+            </label>
+        }
+
+        @if (_failed)
+        {
+            <p class="dialog__error">@L["Access_Failed"]</p>
+        }
+
+        <footer class="dialog__foot">
+            <span class="dialog__spacer"></span>
+            <button type="button" class="button button--primary"
+                    disabled="@(_busy || string.IsNullOrWhiteSpace(_name))"
+                    @onclick="SubmitAsync">
+                @L["Access_Submit"]
+            </button>
+        </footer>
+    }
+</div>
+
+@code {
+    private string _name = string.Empty;
+    private string _code = string.Empty;
+    private bool _busy;
+    private bool _failed;
+
+    protected override void OnInitialized() => Auth.Changed += StateHasChanged;
+
+    private async Task SubmitAsync()
+    {
+        _busy = true;
+        _failed = !await Auth.RequestAccessAsync(_name, _code);
+        _busy = false;
+
+        if (!_failed && Auth.Identity.Approved)
+        {
+            Nav.NavigateTo("");
+        }
+    }
+}

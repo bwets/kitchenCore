@@ -4,6 +4,8 @@ using KitchenCore.Server.Endpoints;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddKitchenCore();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<KitchenCore.Server.Auth.DeviceContext>();
 
 var app = builder.Build();
 
@@ -20,6 +22,7 @@ app.MapStaticAssets();
 app.MapGet("/healthz", () => Results.Ok(new { status = "ok" }));
 app.MapSystemEndpoints();
 app.MapMenuEndpoints();
+app.MapAuthEndpoints();
 
 // Anything that is not an API route or a file is a client-side route.
 app.MapFallbackToFile("index.html");

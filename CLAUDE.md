@@ -131,6 +131,20 @@ the model exists now so the home card and the grid agree.)
 
 ## Gotchas hit already
 
+- **Fluent v5 injects an adopted stylesheet** containing
+  `body { height: 100dvh; overflow: hidden }` -- it assumes an app-shell where an
+  inner region scrolls. Adopted sheets are author-level and applied after ours,
+  so they win every tie. Beat them with an extra element in the selector
+  (`html body`), not `!important`. The same ordering is why Fluent's design
+  tokens are repointed at ours rather than its rules being overridden.
+- **Drag and drop lives in `wwwroot/js/drag.js`, not in Blazor.** Handling
+  pointermove in C# meant an interop call plus a re-render per move and was
+  visibly laggy. JS owns the gesture and calls .NET once, on drop. Three things
+  there are load-bearing: `setPointerCapture` (without it a drag cannot leave its
+  own column), swallowing the `click` that follows a drag (otherwise every drop
+  opens the edit dialog), and returning early when the drop cell is the source
+  cell (otherwise an imprecise drag asks what to do).
+
 - `.NET 10` serves the WASM client through `app.MapStaticAssets()`. The legacy
   `UseBlazorFrameworkFiles()` + `UseStaticFiles()` pair does not serve `_framework`.
 - Singletons in the client must not depend on a scoped `HttpClient`; the client's

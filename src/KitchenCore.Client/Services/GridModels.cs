@@ -11,3 +11,6 @@ public sealed record MenuEntryRef(DateOnly Date, string Slot, int Index, MenuEnt
 /// modifier, so the colours stay in the theme where every other colour lives.
 /// </summary>
 public sealed record DayMarker(DateTime At, string Kind, string Label);
+
+/// <summary>A drop waiting on the user's answer, because the target is occupied.</summary>
+public sealed record DropRequest(MenuEntryRef From, DropTarget To, bool Copy);

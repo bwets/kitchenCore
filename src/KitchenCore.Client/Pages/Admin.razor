@@ -1,0 +1,164 @@
+@page "/admin"
+@inject HttpClient Http
+@inject AuthService Auth
+@inject IStringLocalizer<Strings> L
+
+@* Approving devices and setting what each may do, per section. *@
+
+<PageTitle>@L["Admin_Title"] · @L["AppName"]</PageTitle>
+
+@if (!Auth.Identity.Admin)
+{
+    <div class="panel panel--narrow">
+        <h1>@L["Admin_Title"]</h1>
+        <p class="muted">@L["Admin_Denied"]</p>
+    </div>
+}
+else
+{
+    <div class="panel">
+        <h1>@L["Admin_Title"]</h1>
+
+        @if (_devices is null)
+        {
+            <p class="loading">@L["Loading"]</p>
+        }
+        else if (_devices.Count == 0)
+        {
+            <p class="muted">@L["Admin_None"]</p>
+        }
+        else
+        {
+            <table class="devices">
+                <thead>
+                    <tr>
+                        <th>@L["Admin_Device"]</th>
+                        <th>@L["Admin_Menu"]</th>
+                        <th>@L["Admin_Shopping"]</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var device in _devices)
+                    {
+                        <tr class="@(device.Approved ? null : "is-pending")">
+                            <td>
+                                <span class="devices__name">@device.Name</span>
+                                <span class="devices__meta">
+                                    @device.Id
+                                    @if (device.Admin)
+                                    {
+                                        <span class="badge badge--soft">@L["Admin_IsAdmin"]</span>
+                                    }
+                                    @if (!device.Approved)
+                                    {
+                                        <span class="badge badge--soft">@L["Admin_Pending"]</span>
+                                    }
+                                </span>
+                            </td>
+
+                            <td>@RoleSelect(device, "menu")</td>
+                            <td>@RoleSelect(device, "shopping")</td>
+
+                            <td class="devices__actions">
+                                @if (!device.Approved)
+                                {
+                                    <button type="button" class="button button--primary"
+                                            @onclick="() => ApproveAsync(device)">
+                                        @L["Admin_Approve"]
+                                    </button>
+                                }
+
+                                <button type="button" class="button button--danger"
+                                        @onclick="() => RevokeAsync(device)">
+                                    @L["Admin_Revoke"]
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+}
+
+@code {
+    private List<DeviceSummary>? _devices;
+
+    private static readonly SectionRole[] Roles =
+        [SectionRole.None, SectionRole.Viewer, SectionRole.Requestor, SectionRole.Editor];
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Auth.Identity.Admin)
+        {
+            await LoadAsync();
+        }
+    }
+
+    private async Task LoadAsync() =>
+        _devices = await Http.GetFromJsonAsync<List<DeviceSummary>>("api/admin/devices");
+
+    private RenderFragment RoleSelect(DeviceSummary device, string section) => builder =>
+    {
+        builder.OpenElement(0, "select");
+        builder.AddAttribute(1, "class", "field__input field__input--inline");
+        builder.AddAttribute(2, "onchange", EventCallback.Factory.Create<ChangeEventArgs>(
+            this, e => SetRoleAsync(device, section, e.Value?.ToString())));
+
+        foreach (var role in Roles)
+        {
+            builder.OpenElement(3, "option");
+            builder.AddAttribute(4, "value", role.ToString());
+            builder.AddAttribute(5, "selected", device.Sections.GetValueOrDefault(section) == role);
+            builder.AddContent(6, RoleLabel(role));
+            builder.CloseElement();
+        }
+
+        builder.CloseElement();
+    };
+
+    private string RoleLabel(SectionRole role) => role switch
+    {
+        SectionRole.Viewer => L["Role_Viewer"],
+        SectionRole.Requestor => L["Role_Requestor"],
+        SectionRole.Editor => L["Role_Editor"],
+        _ => L["Role_None"],
+    };
+
+    private async Task SetRoleAsync(DeviceSummary device, string section, string? value)
+    {
+        if (!Enum.TryParse<SectionRole>(value, out var role))
+        {
+            return;
+        }
+
+        var sections = new Dictionary<string, SectionRole>(device.Sections) { [section] = role };
+
+        await Http.PatchAsJsonAsync($"api/admin/devices/{device.Id}", new DeviceUpdate { Sections = sections });
+        await LoadAsync();
+    }
+
+    private async Task ApproveAsync(DeviceSummary device)
+    {
+        // Approving with no role granted would look like access and behave like
+        // none, so a newly approved device starts as a viewer of the menu.
+        var sections = new Dictionary<string, SectionRole>(device.Sections);
+
+        if (sections.GetValueOrDefault("menu") == SectionRole.None)
+        {
+            sections["menu"] = SectionRole.Viewer;
+        }
+
+        await Http.PatchAsJsonAsync($"api/admin/devices/{device.Id}",
+            new DeviceUpdate { Approved = true, Sections = sections });
+
+        await LoadAsync();
+    }
+
+    private async Task RevokeAsync(DeviceSummary device)
+    {
+        await Http.DeleteAsync($"api/admin/devices/{device.Id}");
+        await LoadAsync();
+    }
+}

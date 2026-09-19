@@ -12,6 +12,8 @@ builder.RootComponents.Add<HeadOutlet>("head::after");
 builder.Services.AddSingleton(_ => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
 builder.Services.AddSingleton<SystemStatusService>();
 builder.Services.AddSingleton<MenuClient>();
+builder.Services.AddSingleton<DragController>();
+builder.Services.AddSingleton<AuthService>();
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<IShoppingSchedule, PredictedShoppingSchedule>();
 builder.Services.AddSingleton<CulturePreference>();
@@ -39,5 +41,9 @@ catch (Exception ex) when (ex is HttpRequestException or InvalidOperationExcepti
 }
 
 CulturePreference.Apply(await culture.ResolveAsync(defaultCulture));
+
+// The device's token has to be on the HttpClient before any view calls an API,
+// or the first request of the session goes out unauthenticated.
+await host.Services.GetRequiredService<AuthService>().InitializeAsync();
 
 await host.RunAsync();
