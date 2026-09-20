@@ -73,10 +73,10 @@
                        cannot drop onto, which would make this view read-only.
                        Laid out as a table rather than stacked lines, or a month
                        of mostly-empty days becomes a page of dashes. *@
-                    <div class="list-grid" style="--slot-count:@VisibleSlots(week).Count">
+                    <div class="list-grid" style="--slot-count:@VisibleSlots.Count">
                         <span class="list-grid__corner"></span>
 
-                        @foreach (var slot in VisibleSlots(week))
+                        @foreach (var slot in VisibleSlots)
                         {
                             <span class="list-grid__slot @SlotTone.CssClass(slot.Key)">@slot.Label(Culture)</span>
                         }
@@ -96,7 +96,7 @@
                                 }
                             </span>
 
-                            @foreach (var slot in VisibleSlots(week))
+                            @foreach (var slot in VisibleSlots)
                             {
                                 var cell = day.Cells.FirstOrDefault(c =>
                                     string.Equals(c.Slot, slot.Key, StringComparison.OrdinalIgnoreCase));
@@ -162,8 +162,17 @@
     private bool _showAllSlots;
     private bool _scrollPending;
 
-    private IReadOnlyList<SlotDefinition> VisibleSlots(IGrouping<DateOnly, MenuDay> week) =>
-        SlotVisibility.Visible(_allSlots, [.. week], _showAllSlots);
+    /// <summary>
+    /// One column set for every week on screen, computed across the whole month.
+    ///
+    /// The grid views decide this per week, which keeps a quiet week from
+    /// carrying an empty row for a busy one. That trade is wrong here: the weeks
+    /// are stacked one above another, so a week with an extra column makes every
+    /// column below it step sideways. Aligned columns are worth more than the
+    /// occasional empty one.
+    /// </summary>
+    private IReadOnlyList<SlotDefinition> VisibleSlots =>
+        SlotVisibility.Visible(_allSlots, _range?.Days ?? [], _showAllSlots);
 
     private IEnumerable<DayMarker> MarkersOn(DateOnly date) =>
         _markers.Where(m => DateOnly.FromDateTime(m.At) == date);
