@@ -141,4 +141,12 @@
   <data name="Error_Unregistered" xml:space="preserve"><value>Cet appareil n'est pas encore enregistré.</value></data>
   <data name="Error_NotAllowed" xml:space="preserve"><value>Cet appareil n'a pas le droit de faire cela.</value></data>
   <data name="Error_Server" xml:space="preserve"><value>Le serveur du menu a rencontré un problème.</value></data>
+  <data name="Nav_Menu" xml:space="preserve"><value>Menu</value></data>
+  <data name="Nav_Shopping" xml:space="preserve"><value>Courses</value></data>
+  <data name="Nav_Modules" xml:space="preserve"><value>Sections</value></data>
+  <data name="Nav_Views" xml:space="preserve"><value>Vues</value></data>
+  <data name="Nav_NotYet" xml:space="preserve"><value>Pas encore disponible.</value></data>
+  <data name="Nav_Soon" xml:space="preserve"><value>bientôt</value></data>
+  <data name="Nav_Administration" xml:space="preserve"><value>Administration</value></data>
+  <data name="Nav_Devices" xml:space="preserve"><value>Appareils</value></data>
 </root>

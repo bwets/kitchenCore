@@ -1,3 +1,4 @@
+@page "/admin/devices"
 @page "/admin"
 @inject HttpClient Http
 @inject AuthService Auth
@@ -5,7 +6,7 @@
 
 @* Approving devices and setting what each may do, per section. *@
 
-<PageTitle>@L["Admin_Title"] · @L["AppName"]</PageTitle>
+<PageTitle>@L["Nav_Devices"] · @L["AppName"]</PageTitle>
 
 @if (!Auth.Identity.Admin)
 {

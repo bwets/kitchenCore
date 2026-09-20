@@ -4,28 +4,49 @@
 @inject NavigationManager Nav
 @inject IStringLocalizer<Strings> L
 
+@*
+    Two levels of navigation, because the app has two levels: which part of
+    family life you are in, and how you want to look at it.
+
+    Modules are tabs on the top bar. Views sit in a second row underneath, and
+    only for the module you are in -- a flat row of links made "Week" and
+    "Shopping" read as siblings, when one is a view and the other is a whole
+    other part of the app.
+*@
+
 <header class="app-header">
-    <span class="app-header__brand">
-        <span class="app-header__mark" aria-hidden="true">
-            <BrandMark />
-        </span>
+    <a class="app-header__brand" href="">
+        <span class="app-header__mark" aria-hidden="true"><BrandMark /></span>
         @L["AppName"]
-    </span>
+    </a>
 
-    <nav class="app-header__nav">
-        @if (Auth.Identity.Approved)
-        {
-        <NavLink class="nav-link" href="" Match="NavLinkMatch.All">@L["Nav_Home"]</NavLink>
-        <NavLink class="nav-link" href="menu/week">@L["Nav_Week"]</NavLink>
-        <NavLink class="nav-link" href="menu/multi-week">@L["Nav_MultiWeek"]</NavLink>
-        <NavLink class="nav-link" href="menu/list">@L["Nav_List"]</NavLink>
+    @if (Auth.Identity.Approved)
+    {
+        <nav class="app-header__modules" aria-label="@L["Nav_Modules"]">
+            @foreach (var module in AppModules.Tabs)
+            {
+                var ready = module.Views.Count > 0;
 
-        @if (Auth.Identity.Admin)
-        {
-            <NavLink class="nav-link" href="admin">@L["Nav_Admin"]</NavLink>
-        }
-        }
-    </nav>
+                @if (ready)
+                {
+                    <a class="module-tab @(IsCurrent(module) ? "is-current" : null)"
+                       href="@FirstViewOf(module)">
+                        @L[module.LabelKey]
+                    </a>
+                }
+                else
+                {
+                    @* Present but plainly not ready. A tab that appears later
+                       shifts everything beside it, and the shape of the app is
+                       easier to hold when the empty room is on the plan. *@
+                    <span class="module-tab is-later" title="@L["Nav_NotYet"]">
+                        @L[module.LabelKey]
+                        <span class="module-tab__later">@L["Nav_Soon"]</span>
+                    </span>
+                }
+            }
+        </nav>
+    }
 
     <span class="app-header__spacer"></span>
 
@@ -33,8 +54,35 @@
         <ThemePicker />
         <LanguagePicker />
         <GitBadge />
+
+        @if (Auth.Identity.Admin)
+        {
+            @* A cog, not a tab. Administration is not one of the things the
+               family does here, and a tab would give it equal billing with the
+               menu. *@
+            <a class="cog @(IsAdminPage ? "is-current" : null)"
+               href="@AppModules.Administration.Views[0].Route"
+               title="@L["Nav_Administration"]"
+               aria-label="@L["Nav_Administration"]">
+                <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none"
+                     stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="3.2" />
+                    <path d="M19.4 15a1.6 1.6 0 0 0 .32 1.77l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.6 1.6 0 0 0-1.77-.32 1.6 1.6 0 0 0-1 1.47V21a2 2 0 1 1-4 0v-.1A1.6 1.6 0 0 0 9 19.4a1.6 1.6 0 0 0-1.77.32l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.6 1.6 0 0 0 4.6 15a1.6 1.6 0 0 0-1.47-1H3a2 2 0 1 1 0-4h.1A1.6 1.6 0 0 0 4.6 9a1.6 1.6 0 0 0-.32-1.77l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.6 1.6 0 0 0 9 4.6h.07A1.6 1.6 0 0 0 10 3.13V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 1 1.47 1.6 1.6 0 0 0 1.77-.32l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.6 1.6 0 0 0 19.4 9v.07a1.6 1.6 0 0 0 1.47 1H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z" />
+                </svg>
+            </a>
+        }
     </div>
 </header>
+
+@if (Auth.Identity.Approved && Current is { Views.Count: > 0 } current)
+{
+    <nav class="app-views" aria-label="@L["Nav_Views"]">
+        @foreach (var view in current.Views)
+        {
+            <NavLink class="view-tab" href="@view.Route">@L[view.LabelKey]</NavLink>
+        }
+    </nav>
+}
 
 <main class="app-main">
     @if (Auth.Identity.Approved || IsAccessPage)
@@ -54,19 +102,38 @@
     }
 </main>
 
-@* Fluent's providers back the dialog, toast and tooltip services. The entry
-   dialog and the drop-choice dialog in later sessions depend on these. *@
+@* Fluent's providers back the dialog, toast and tooltip services. *@
 <FluentProviders />
 
 @code {
-    private bool IsAccessPage =>
-        Nav.ToBaseRelativePath(Nav.Uri).TrimEnd('/').StartsWith("access", StringComparison.OrdinalIgnoreCase);
+    private string Path => Nav.ToBaseRelativePath(Nav.Uri).Split('?')[0].TrimEnd('/');
+
+    private AppModule? Current => AppModules.ForPath(Path);
+
+    private bool IsAccessPage => Path.StartsWith("access", StringComparison.OrdinalIgnoreCase);
+
+    private bool IsAdminPage => AppModules.Administration.Owns(Path);
+
+    private bool IsCurrent(AppModule module) => module.Owns(Path);
+
+    /// <summary>
+    /// A module tab goes to its first view rather than to the module itself,
+    /// so clicking "Menu" lands somewhere usable instead of on a router miss.
+    /// </summary>
+    private static string FirstViewOf(AppModule module) =>
+        module.Views.Count > 0 ? module.Views[0].Route : module.Route;
 
     protected override void OnInitialized()
     {
         Auth.Changed += StateHasChanged;
-        Nav.LocationChanged += (_, _) => StateHasChanged();
+        Nav.LocationChanged += OnLocationChanged;
     }
 
-    public void Dispose() => Auth.Changed -= StateHasChanged;
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e) => StateHasChanged();
+
+    public void Dispose()
+    {
+        Auth.Changed -= StateHasChanged;
+        Nav.LocationChanged -= OnLocationChanged;
+    }
 }

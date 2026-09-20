@@ -36,21 +36,14 @@
     font-size: 1rem;
   }
 
-  &__nav {
-    display: flex;
-    gap: $space-1;
-    overflow-x: auto;
-    scrollbar-width: none;
-
-    &::-webkit-scrollbar { display: none; }
-  }
-
-  // Source order is brand, nav, spacer, tools. Explicit orders let the same
-  // markup lay out as one row on a desktop and two on a phone.
-  &__brand  { order: 1; }
-  &__nav    { order: 2; }
-  &__spacer { order: 3; }
-  &__tools  { order: 4; }
+  // Source order is brand, modules, spacer, tools. Explicit orders let the same
+  // markup lay out as one row on a desktop and two on a phone -- but every child
+  // needs one: an element without it defaults to 0 and jumps to the front, which
+  // is how the app title ended up after the tabs.
+  &__brand   { order: 1; }
+  &__modules { order: 2; }
+  &__spacer  { order: 3; }
+  &__tools   { order: 4; }
 
   &__spacer { flex: 1 1 auto; }
 
@@ -60,15 +53,14 @@
     gap: $space-2;
   }
 
-  // Phone: brand and tools share the top row, the nav takes a full-width second
-  // row of its own. With more views coming (multi-week, list) the nav needs the
-  // whole width to scroll in.
+  // Phone: brand and tools share the top row, the module tabs take a full-width
+  // second row of their own.
   @media (max-width: $bp-tablet) {
     padding: $space-2 $space-3;
     gap: $space-2;
     row-gap: $space-2;
 
-    &__nav {
+    &__modules {
       order: 5;
       flex: 1 0 100%;
       width: 100%;
@@ -276,4 +268,110 @@
 .git-badge__alert {
   background: var(--error);
   color: var(--on-error);
+}
+
+
+// A module tab. Reads as a tab rather than a link: it selects a part of the
+// app, and the row of views below belongs to whichever one is current.
+.module-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-2;
+  padding: 0 $space-4;
+  border-bottom: 2px solid transparent;
+  color: var(--on-surface-variant);
+  font-size: 0.92rem;
+  font-weight: 600;
+  white-space: nowrap;
+  text-decoration: none;
+
+  &:hover { color: var(--on-surface); }
+
+  &.is-current {
+    border-bottom-color: var(--primary);
+    color: var(--on-surface);
+  }
+
+  // Present, but plainly not ready.
+  &.is-later {
+    color: var(--outline);
+    cursor: default;
+    font-weight: 500;
+  }
+
+  &__later {
+    padding: 0 $space-2;
+    border-radius: $radius-full;
+    background: var(--surface-container-high);
+    color: var(--on-surface-variant);
+    font-size: 0.62rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+}
+
+// The second row: how to look at the current module.
+.app-views {
+  position: sticky;
+  top: var(--header-height);
+  z-index: 19;
+  display: flex;
+  gap: $space-1;
+  padding: $space-2 $space-4;
+  background: var(--surface-container-low);
+  border-bottom: 1px solid var(--outline-variant);
+  overflow-x: auto;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar { display: none; }
+
+  @media (max-width: $bp-tablet) {
+    padding: $space-2 $space-3;
+  }
+}
+
+.view-tab {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.25rem;
+  padding: 0 $space-4;
+  border-radius: $radius-full;
+  color: var(--on-surface-variant);
+  font-size: 0.85rem;
+  white-space: nowrap;
+  text-decoration: none;
+
+  &:hover {
+    background: var(--surface-container-high);
+    color: var(--on-surface);
+  }
+
+  &.active {
+    background: var(--primary-container);
+    color: var(--on-primary-container);
+    font-weight: 600;
+  }
+}
+
+// Administration lives behind this rather than in a tab.
+.cog {
+  display: inline-grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: $radius-full;
+  border: 1px solid transparent;
+  color: var(--on-surface-variant);
+  text-decoration: none;
+
+  &:hover {
+    background: var(--surface-container-high);
+    color: var(--on-surface);
+  }
+
+  &.is-current {
+    background: var(--primary-container);
+    color: var(--on-primary-container);
+  }
 }
