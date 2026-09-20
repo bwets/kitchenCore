@@ -119,10 +119,18 @@ has to approve a device with themselves. It is gated on the flag **and** the
 request coming from loopback -- the flag alone would turn a stray environment
 variable on a real server into open admin access.
 
-**Known broken:** the Photino window opens but renders nothing on this machine --
-black on Photino 4.0.16, white on 3.2.3, for any content including a trivial raw
-HTML string, with no error logged. The embedded server itself is verified working
-over HTTP. WebView2 runtime 153.x is installed. Unresolved.
+**`[STAThread]` on Main is load-bearing.** WebView2 requires a single-threaded
+apartment. Top-level statements run as MTA, which leaves the WebView created but
+never initialised: the window opens and paints *nothing* -- for any content,
+including a trivial raw HTML string -- with no error logged anywhere. There is
+nothing to find by investigating the content, the URL or the server. The same
+comment sits in MarkdownBlaze's Program.cs; check sibling projects before
+bisecting package versions.
+
+The package is **PhotinoX** (a maintained fork), matching MarkdownBlaze, not
+`Photino.NET`. Its API differs: `LoadString` not `LoadRawString`,
+`RegisterSizeChangedHandler`/`RegisterClosingHandler` not the `...Handler` events,
+and `new PhotinoApplication().Run(window)` rather than `window.WaitForClose()`.
 
 First run asks for the server address and a name for the device, and writes
 `config.yaml` under the platform's app-data folder

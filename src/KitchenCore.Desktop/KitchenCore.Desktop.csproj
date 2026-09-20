@@ -27,7 +27,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Photino.NET" Version="3.2.3" />
+    <PackageReference Include="PhotinoX" Version="5.2.2" />
     <PackageReference Include="YamlDotNet" Version="18.1.0" />
   </ItemGroup>
 
