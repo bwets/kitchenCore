@@ -264,7 +264,7 @@
 
         if (!result.Success)
         {
-            _error = result.Error ?? L["SaveFailed"];
+            _error = L[result.ResourceKey ?? "SaveFailed"];
             return;
         }
 
@@ -292,7 +292,7 @@
 
         if (!result.Success)
         {
-            _error = result.Error ?? L["SaveFailed"];
+            _error = L[result.ResourceKey ?? "SaveFailed"];
             return;
         }
 

@@ -103,6 +103,27 @@ is already a web app, so the desktop build is genuinely just a window at a URL.
 The trade: it is **not self-contained on Linux**, which needs `libwebkit2gtk`
 installed. Windows and macOS ship their webview with the OS.
 
+**Standalone mode hosts the real server in-process** (`EmbeddedServer` calls the
+same `KitchenCoreHost.Build` the server executable does), bound to loopback, so
+the app works with nothing else set up. Two things make that work and are easy to
+undo by accident:
+
+- `builder.WebHost.UseStaticWebAssets()` -- ASP.NET only loads the static assets
+  manifest by itself in Development. This process is Production, so without it
+  every asset returns 200 with **zero bytes** and the window is blank.
+- The desktop csproj uses `Microsoft.NET.Sdk.Web`. A plain console project never
+  runs the targets that produce the assets manifest at all.
+
+Single-user mode (`KITCHENCORE_SINGLE_USER`) reports a standing admin so nobody
+has to approve a device with themselves. It is gated on the flag **and** the
+request coming from loopback -- the flag alone would turn a stray environment
+variable on a real server into open admin access.
+
+**Known broken:** the Photino window opens but renders nothing on this machine --
+black on Photino 4.0.16, white on 3.2.3, for any content including a trivial raw
+HTML string, with no error logged. The embedded server itself is verified working
+over HTTP. WebView2 runtime 153.x is installed. Unresolved.
+
 First run asks for the server address and a name for the device, and writes
 `config.yaml` under the platform's app-data folder
 (`%APPDATA%wetsKitchenCore` on Windows, `~/.config/bwets/KitchenCore` on

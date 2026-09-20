@@ -3,14 +3,34 @@ using YamlDotNet.Serialization.NamingConventions;
 
 namespace KitchenCore.Desktop;
 
+/// <summary>Where the menu lives.</summary>
+public enum DesktopMode
+{
+    /// <summary>Everything runs in this app; the files sit on this machine.</summary>
+    Standalone,
+
+    /// <summary>Connect to a KitchenCore server the family already runs.</summary>
+    Server,
+}
+
 /// <summary>
-/// What this machine needs to know to open the app: which server, and what to
-/// call itself when it asks that server for access.
+/// What this machine needs to know to open the app: where the menu lives, and
+/// what to call itself.
 /// </summary>
 public sealed class DesktopConfig
 {
+    /// <summary>Standalone by default: it works with nothing else set up.</summary>
+    public DesktopMode Mode { get; set; } = DesktopMode.Standalone;
+
     /// <summary>Where KitchenCore is served from, e.g. http://kitchen.local:8080.</summary>
     public string? ServerUrl { get; set; }
+
+    /// <summary>
+    /// Data folder for standalone mode. Empty means the default beside the
+    /// config -- but it is worth being able to point this at a synced folder, or
+    /// at a git clone, since that is how the data gets shared in the first place.
+    /// </summary>
+    public string? DataPath { get; set; }
 
     /// <summary>
     /// Shown to the admin approving this device. It is a label for a person to
@@ -24,8 +44,15 @@ public sealed class DesktopConfig
 
     public int Height { get; set; } = 860;
 
-    public bool IsComplete =>
-        !string.IsNullOrWhiteSpace(ServerUrl) && !string.IsNullOrWhiteSpace(DeviceName);
+    /// <summary>Standalone needs somewhere to keep files; server mode needs an address.</summary>
+    public bool IsComplete => !string.IsNullOrWhiteSpace(DeviceName) &&
+        (Mode == DesktopMode.Standalone || !string.IsNullOrWhiteSpace(ServerUrl));
+
+    public string ResolvedDataPath => string.IsNullOrWhiteSpace(DataPath)
+        ? System.IO.Path.Combine(DesktopConfigStore.Directory, "data")
+        : DataPath;
+
+    public string ResolvedConfigPath => System.IO.Path.Combine(DesktopConfigStore.Directory, "config");
 }
 
 /// <summary>
@@ -54,6 +81,9 @@ public static class DesktopConfigStore
         "KitchenCore");
 
     public static string Path_ => Path.Combine(Directory, "config.yaml");
+
+    /// <summary>Shown as the placeholder for the menu folder in standalone mode.</summary>
+    public static string DefaultDataPath => Path.Combine(Directory, "data");
 
     public static DesktopConfig Load()
     {

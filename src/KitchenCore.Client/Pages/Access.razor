@@ -42,6 +42,7 @@
             <span class="field__label">@L["Access_Name"]</span>
             <input class="field__input" value="@_name"
                    @oninput="e => _name = e.Value?.ToString() ?? string.Empty" />
+            <span class="field__hint">@L["Access_NameHint"]</span>
         </label>
 
         @if (Auth.NeedsBootstrap)

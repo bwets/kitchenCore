@@ -41,6 +41,11 @@
     }
 </div>
 
+@if (_loadError is { Length: > 0 })
+{
+    <div class="issues">@_loadError</div>
+}
+
 @if (_conflict)
 {
     <div class="issues">@L["Conflict"]</div>
@@ -180,6 +185,7 @@
     private DayOfWeek _weekStart = DayOfWeek.Monday;
     private bool _loading = true;
     private bool _conflict;
+    private string? _loadError;
     private DropRequest? _pendingDrop;
     private MenuEntryRef? _editing;
 
@@ -240,13 +246,26 @@
     {
         _loading = true;
         _conflict = false;
+        _loadError = null;
 
         // Whole weeks around the month, so a week straddling the boundary is not
         // shown cut in half.
         var from = StartOfWeek(_start);
         var to = StartOfWeek(_start.AddMonths(1).AddDays(-1)).AddDays(6);
 
-        _range = await Menu.RangeAsync(from, to);
+        try
+        {
+            _range = await Menu.RangeAsync(from, to);
+        }
+        catch (ApiException ex)
+        {
+            // An empty week and an unreachable server look identical otherwise.
+            _loadError = L[ex.ResourceKey];
+            _range = null;
+            _loading = false;
+            return;
+        }
+
 
         // Only scroll when the month on screen actually contains today.
         _scrollPending = _range.Days.Any(d => IsToday(d.Date));

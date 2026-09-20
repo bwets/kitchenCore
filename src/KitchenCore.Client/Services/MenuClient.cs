@@ -11,15 +11,26 @@ public sealed class MenuClient(HttpClient http)
     {
         var url = $"api/menu/range?from={Iso(from)}&to={Iso(to)}";
 
-        return await http.GetFromJsonAsync<MenuRangeResponse>(url, cancellationToken)
+        return await GetAsync<MenuRangeResponse>(url, cancellationToken)
             ?? new MenuRangeResponse { From = from, To = to };
     }
 
     public Task<MenuRangeResponse> DayAsync(DateOnly date, CancellationToken cancellationToken = default) =>
         RangeAsync(date, date, cancellationToken);
 
-    public async Task<IReadOnlyList<string>> TitlesAsync(CancellationToken cancellationToken = default) =>
-        await http.GetFromJsonAsync<List<string>>("api/menu/titles", cancellationToken) ?? [];
+    public async Task<IReadOnlyList<string>> TitlesAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            return await GetAsync<List<string>>("api/menu/titles", cancellationToken) ?? [];
+        }
+        catch (ApiException)
+        {
+            // Autocomplete is a convenience. Losing it must not stop somebody
+            // typing a meal in.
+            return [];
+        }
+    }
 
     public Task<MenuWriteOutcome> UpsertAsync(
         DateOnly date,
@@ -69,11 +80,20 @@ public sealed class MenuClient(HttpClient http)
             request.Headers.TryAddWithoutValidation("If-Match", $"\"{version}\"");
         }
 
-        var response = await http.SendAsync(request, cancellationToken);
+        HttpResponseMessage response;
+
+        try
+        {
+            response = await http.SendAsync(request, cancellationToken);
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        {
+            return new MenuWriteOutcome { Success = false, ResourceKey = "Error_Unreachable" };
+        }
 
         if (response.StatusCode == System.Net.HttpStatusCode.PreconditionFailed)
         {
-            return new MenuWriteOutcome { Success = false, Conflict = true };
+            return new MenuWriteOutcome { Success = false, Conflict = true, ResourceKey = "Conflict" };
         }
 
         if (!response.IsSuccessStatusCode)
@@ -81,7 +101,7 @@ public sealed class MenuClient(HttpClient http)
             return new MenuWriteOutcome
             {
                 Success = false,
-                Error = await response.Content.ReadAsStringAsync(cancellationToken),
+                ResourceKey = ApiException.From(response.StatusCode).ResourceKey,
             };
         }
 
@@ -125,7 +145,7 @@ public sealed class MenuClient(HttpClient http)
     }
 
     public async Task<IReadOnlyList<MenuRequest>> RequestsAsync(CancellationToken cancellationToken = default) =>
-        await http.GetFromJsonAsync<List<MenuRequest>>("api/menu/requests", cancellationToken) ?? [];
+        await GetAsync<List<MenuRequest>>("api/menu/requests", cancellationToken) ?? [];
 
     public async Task<bool> AddRequestAsync(string title, string? notes, CancellationToken cancellationToken = default)
     {
@@ -177,6 +197,39 @@ public sealed class MenuClient(HttpClient http)
         mode,
     };
 
+    /// <summary>
+    /// A GET that reports why it failed instead of throwing whatever the HTTP
+    /// stack produced. An unreachable server and a forbidden one are different
+    /// problems and deserve different words.
+    /// </summary>
+    private async Task<T?> GetAsync<T>(string url, CancellationToken cancellationToken)
+    {
+        HttpResponseMessage response;
+
+        try
+        {
+            response = await http.GetAsync(url, cancellationToken);
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        {
+            throw new ApiException(ApiFailure.Unreachable, ex.Message);
+        }
+
+        if (!response.IsSuccessStatusCode)
+        {
+            throw ApiException.From(response.StatusCode);
+        }
+
+        try
+        {
+            return await response.Content.ReadFromJsonAsync<T>(cancellationToken);
+        }
+        catch (Exception ex) when (ex is System.Text.Json.JsonException or HttpRequestException)
+        {
+            throw new ApiException(ApiFailure.Server, ex.Message);
+        }
+    }
+
     private static string Iso(DateOnly date) => date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
 }
 
@@ -188,5 +241,10 @@ public sealed record MenuWriteOutcome
     /// <summary>The menu changed on the server since it was loaded; reload and retry.</summary>
     public bool Conflict { get; init; }
 
-    public string? Error { get; init; }
+    /// <summary>
+    /// Resource key for what to tell the user. A key rather than a message
+    /// because the UI is bilingual -- passing the server's own wording through
+    /// would show English to someone using the app in French.
+    /// </summary>
+    public string? ResourceKey { get; init; }
 }

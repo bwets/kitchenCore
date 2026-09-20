@@ -1,4 +1,17 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+﻿<!--
+  The Web SDK, on a desktop executable.
+
+  Standalone mode hosts the real KitchenCore server in this process, and that
+  application serves the Blazor client through .NET's static web assets. The
+  manifest those need is produced by the Web SDK's targets, which a plain
+  console project never runs, so the app started, failed to find
+  KitchenCore.staticwebassets.endpoints.json, and fell back to the setup screen
+  with no visible reason.
+
+  OutputType WinExe keeps it a windowed app: no console flashes up behind the
+  webview.
+-->
+<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
@@ -7,11 +20,20 @@
     <Nullable>enable</Nullable>
     <AssemblyName>KitchenCore</AssemblyName>
     <RootNamespace>KitchenCore.Desktop</RootNamespace>
+
+    <!-- There is no appsettings.json and no launch profile here; the desktop
+         app is configured by its own config.yaml. -->
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Photino.NET" Version="4.0.16" />
+    <PackageReference Include="Photino.NET" Version="3.2.3" />
     <PackageReference Include="YamlDotNet" Version="18.1.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\KitchenCore.Server\KitchenCore.Server.csproj" />
+    <ProjectReference Include="..\KitchenCore.Core\KitchenCore.Core.csproj" />
   </ItemGroup>
 
 </Project>

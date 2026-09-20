@@ -29,12 +29,40 @@ public class DesktopConfigTests
         Assert.Null(DesktopConfigStore.NormalizeUrl(input));
 
     [Fact]
-    public void A_config_is_only_complete_with_both_answers()
+    public void Standalone_needs_only_a_name()
     {
+        // The point of standalone is that there is nothing else to set up -- but
+        // the name still matters, because the data folder is often a git clone
+        // shared with the family server and those commits need attributing.
         Assert.False(new DesktopConfig().IsComplete);
-        Assert.False(new DesktopConfig { ServerUrl = "http://x" }.IsComplete);
-        Assert.False(new DesktopConfig { DeviceName = "Tablet" }.IsComplete);
-        Assert.True(new DesktopConfig { ServerUrl = "http://x", DeviceName = "Tablet" }.IsComplete);
+
+        Assert.True(new DesktopConfig
+        {
+            Mode = DesktopMode.Standalone,
+            DeviceName = "Papa",
+        }.IsComplete);
+    }
+
+    [Fact]
+    public void Server_mode_also_needs_an_address()
+    {
+        Assert.False(new DesktopConfig { Mode = DesktopMode.Server, DeviceName = "Papa" }.IsComplete);
+
+        Assert.True(new DesktopConfig
+        {
+            Mode = DesktopMode.Server,
+            DeviceName = "Papa",
+            ServerUrl = "http://kitchen.local:8080",
+        }.IsComplete);
+    }
+
+    [Fact]
+    public void The_menu_folder_defaults_beside_the_config()
+    {
+        Assert.Equal(DesktopConfigStore.DefaultDataPath, new DesktopConfig().ResolvedDataPath);
+
+        // ...but can be pointed at a git clone, which is how the menu gets shared.
+        Assert.Equal(@"D:menus", new DesktopConfig { DataPath = @"D:menus" }.ResolvedDataPath);
     }
 
     [Fact]

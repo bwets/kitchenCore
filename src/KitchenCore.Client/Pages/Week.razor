@@ -59,6 +59,11 @@
     }
 </div>
 
+@if (_loadError is { Length: > 0 })
+{
+    <div class="issues">@_loadError</div>
+}
+
 @if (_conflict)
 {
     <div class="issues">@L["Conflict"]</div>
@@ -113,6 +118,7 @@
     private DateOnly _start;
     private bool _loading = true;
     private bool _conflict;
+    private string? _loadError;
     private bool _showAllSlots;
     private MenuEntryRef? _editing;
     private MenuEntryRef? _moving;
@@ -149,8 +155,21 @@
     {
         _loading = true;
         _conflict = false;
+        _loadError = null;
 
-        _range = await Menu.RangeAsync(_start, _start.AddDays(6));
+        try
+        {
+            _range = await Menu.RangeAsync(_start, _start.AddDays(6));
+        }
+        catch (ApiException ex)
+        {
+            // An empty week and an unreachable server look identical otherwise.
+            _loadError = L[ex.ResourceKey];
+            _range = null;
+            _loading = false;
+            return;
+        }
+
 
         // Markers come from the shopping schedule, not the menu files: they are
         // moments in the day rather than meals.

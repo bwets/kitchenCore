@@ -46,6 +46,11 @@
     }
 </div>
 
+@if (_loadError is { Length: > 0 })
+{
+    <div class="issues">@_loadError</div>
+}
+
 @if (_conflict)
 {
     <div class="issues">@L["Conflict"]</div>
@@ -99,6 +104,7 @@
     private int _weeks = 4;
     private bool _loading = true;
     private bool _conflict;
+    private string? _loadError;
     private MenuEntryRef? _editing;
     private MenuEntryRef? _moving;
     private DropRequest? _pendingDrop;
@@ -122,8 +128,21 @@
     {
         _loading = true;
         _conflict = false;
+        _loadError = null;
 
-        _range = await Menu.RangeAsync(_start, _start.AddDays(_weeks * 7 - 1));
+        try
+        {
+            _range = await Menu.RangeAsync(_start, _start.AddDays(_weeks * 7 - 1));
+        }
+        catch (ApiException ex)
+        {
+            // An empty week and an unreachable server look identical otherwise.
+            _loadError = L[ex.ResourceKey];
+            _range = null;
+            _loading = false;
+            return;
+        }
+
 
         _markers = [];
         if (await Shopping.NextTripAsync() is { } trip)

@@ -95,8 +95,8 @@
   <data name="List_Empty" xml:space="preserve"><value>Rien de prévu ce mois-ci.</value></data>
   <data name="Nav_Admin" xml:space="preserve"><value>Appareils</value></data>
   <data name="Access_Title" xml:space="preserve"><value>Demander l'accès</value></data>
-  <data name="Access_Intro" xml:space="preserve"><value>Indiquez de quel appareil il s'agit. Quelqu'un l'approuvera.</value></data>
-  <data name="Access_Name" xml:space="preserve"><value>Nom de cet appareil</value></data>
+  <data name="Access_Intro" xml:space="preserve"><value>Indiquez qui demande l'accès. Quelqu'un l'approuvera.</value></data>
+  <data name="Access_Name" xml:space="preserve"><value>Votre nom, ou un nom pour cet appareil</value></data>
   <data name="Access_Code" xml:space="preserve"><value>Code d'installation</value></data>
   <data name="Access_CodeHint" xml:space="preserve"><value>Nécessaire uniquement pour le tout premier appareil.</value></data>
   <data name="Access_Submit" xml:space="preserve"><value>Demander l'accès</value></data>
@@ -136,4 +136,9 @@
   <data name="Requests_AskIntro" xml:space="preserve"><value>Cela ira sur la liste de qui prépare la semaine.</value></data>
   <data name="Requests_DragHint" xml:space="preserve"><value>Glissez-en un sur un jour pour le planifier.</value></data>
   <data name="Requests_Drop" xml:space="preserve"><value>Retirer</value></data>
+  <data name="Access_NameHint" xml:space="preserve"><value>Visible par la personne qui approuve, et utilisé sur vos modifications.</value></data>
+  <data name="Error_Unreachable" xml:space="preserve"><value>Le serveur du menu est injoignable. Vérifiez la connexion et réessayez.</value></data>
+  <data name="Error_Unregistered" xml:space="preserve"><value>Cet appareil n'est pas encore enregistré.</value></data>
+  <data name="Error_NotAllowed" xml:space="preserve"><value>Cet appareil n'a pas le droit de faire cela.</value></data>
+  <data name="Error_Server" xml:space="preserve"><value>Le serveur du menu a rencontré un problème.</value></data>
 </root>
