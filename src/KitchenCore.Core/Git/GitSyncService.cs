@@ -133,7 +133,14 @@ public sealed class GitSyncService(
         }
     }
 
-    private async Task SyncOnceAsync(CancellationToken cancellationToken)
+    /// <summary>
+    /// Commits whatever is queued and pushes it, once, now.
+    ///
+    /// Public so the push path can be tested against a real repository and a real
+    /// bare remote. It had no coverage, and the case it got wrong -- a remote
+    /// with no commits yet -- is the one every new family repo starts in.
+    /// </summary>
+    public async Task SyncOnceAsync(CancellationToken cancellationToken)
     {
         var user = Drain();
         var root = paths.DataRoot;
@@ -186,6 +193,29 @@ public sealed class GitSyncService(
             // A local-only repository is a perfectly good outcome: the history is
             // being kept, there is just nowhere to send it.
             State = State with { Pending = 0, LastSync = DateTimeOffset.UtcNow };
+            return;
+        }
+
+        // A brand-new remote has no branch to rebase onto, and asking git to pull
+        // from one fails with "no such ref was fetched" -- which is not a
+        // conflict, it is simply the very first push. Reported as a conflict,
+        // sync stopped before the family's menu had ever left the machine.
+        var branch = status.Branch;
+        var upstream = branch is { Length: > 0 }
+            ? await runner.RunAsync(root, ["ls-remote", "--heads", "origin", branch], cancellationToken)
+            : null;
+
+        if (upstream is { Ok: true, Output.Length: 0 })
+        {
+            // -u as well, so the branch is tracked from here on and every later
+            // push is a plain one.
+            var first = await runner.RunAsync(root, ["push", "-u", "origin", branch!], cancellationToken);
+
+            State = first.Ok
+                ? State with { Pending = 0, LastSync = DateTimeOffset.UtcNow, LastError = null }
+                : State with { LastError = first.StdErr };
+
+            if (!first.Ok) logger.LogWarning("Git push failed. {Error}", first.StdErr);
             return;
         }
 
