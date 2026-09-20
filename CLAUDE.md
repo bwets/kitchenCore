@@ -190,6 +190,15 @@ the model exists now so the home card and the grid agree.)
 
 ## Gotchas hit already
 
+- **Static web assets are asked for explicitly** in `KitchenCoreHost.Build`
+  (`UseStaticWebAssets()`). ASP.NET only loads that manifest by itself in the
+  Development environment, and the failure everywhere else is vicious: the app
+  starts, `/healthz` answers happily, and every asset returns **200 with zero
+  bytes**, so the page is blank with nothing in any log. It cost three separate
+  debugging sessions -- the container, the desktop app, and a plain
+  `dotnet run --no-launch-profile` -- before being fixed in one place. Do not
+  remove it, and do not assume a blank page means the content is wrong.
+
 - **Fluent v5 injects an adopted stylesheet** containing
   `body { height: 100dvh; overflow: hidden }` -- it assumes an app-shell where an
   inner region scrolls. Adopted sheets are author-level and applied after ours,

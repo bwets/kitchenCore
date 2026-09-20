@@ -27,6 +27,19 @@ public static class KitchenCoreHost
     {
         var builder = WebApplication.CreateBuilder(args);
 
+        // ASP.NET loads the static web assets manifest by itself only in the
+        // Development environment. Anything else -- a container, the desktop
+        // app, `dotnet run --no-launch-profile` -- leaves the web root empty, and
+        // the failure is a nasty one: the app starts, /healthz answers happily,
+        // and every asset returns 200 with ZERO bytes, so the page is simply
+        // blank with nothing in any log.
+        //
+        // This has cost three separate debugging sessions. Asking for the
+        // manifest here, rather than relying on how the app happens to be
+        // started, is what stops it costing a fourth. A published build has a
+        // real wwwroot and no manifest, where this is a no-op.
+        builder.WebHost.UseStaticWebAssets();
+
         builder.Services.AddKitchenCore();
         builder.Services.AddHttpContextAccessor();
         builder.Services.AddScoped<Auth.DeviceContext>();
