@@ -125,6 +125,7 @@ own launch profile. Adding one is a folder and a profile entry.
 ./scripts/reset-fixtures.ps1        # put fixtures/ back after a dev run
 ./scripts/init-git-fixture.ps1      # build the git scenario's repo and remote
 ./scripts/make-icons.ps1            # regenerate the app icon
+node scripts/import-notion.mjs <export> <out> <year>   # one-off Notion import
 ```
 
 Dev runs write into the scenario they are pointed at, on purpose:
