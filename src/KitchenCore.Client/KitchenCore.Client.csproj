@@ -17,6 +17,7 @@
     <PackageReference Include="Markdig" Version="1.4.0" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.12" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="10.0.12" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.AspNetCore.WebUtilities" Version="10.0.12" />
     <PackageReference Include="Microsoft.Extensions.Localization" Version="10.0.12" />
     <PackageReference Include="Microsoft.FluentUI.AspNetCore.Components" Version="5.0.0-rc.5-26219.1" />
   </ItemGroup>

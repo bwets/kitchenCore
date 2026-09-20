@@ -78,7 +78,21 @@
     private bool _busy;
     private bool _failed;
 
-    protected override void OnInitialized() => Auth.Changed += StateHasChanged;
+    protected override void OnInitialized()
+    {
+        Auth.Changed += StateHasChanged;
+
+        // The desktop app already asked what to call this device, and passes it
+        // here. Asking the same question twice is the sort of thing that makes
+        // people distrust a setup flow.
+        var uri = Nav.ToAbsoluteUri(Nav.Uri);
+
+        if (Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(uri.Query)
+            .TryGetValue("device", out var device) && !string.IsNullOrWhiteSpace(device))
+        {
+            _name = device.ToString();
+        }
+    }
 
     private async Task SubmitAsync()
     {

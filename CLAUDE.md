@@ -93,6 +93,23 @@ These are settled; don't relitigate them without a reason.
 - **`/app/config` is mounted separately** from `/app/data` and is never git-synced:
   it holds the GitHub token and the device list.
 
+## Desktop app
+
+`src/KitchenCore.Desktop` is a Photino window pointing at a KitchenCore server.
+Photino wraps the OS's own webview (WebView2 / WebKitGTK / WKWebView) rather than
+bundling a browser, so the build is a few MB rather than a few hundred -- the app
+is already a web app, so the desktop build is genuinely just a window at a URL.
+
+The trade: it is **not self-contained on Linux**, which needs `libwebkit2gtk`
+installed. Windows and macOS ship their webview with the OS.
+
+First run asks for the server address and a name for the device, and writes
+`config.yaml` under the platform's app-data folder
+(`%APPDATA%wetsKitchenCore` on Windows, `~/.config/bwets/KitchenCore` on
+Linux). Photino offers no native dialogs by design, so that prompt is an HTML
+page rendered in the same webview, talking back over `window.external.sendMessage`.
+The device name is passed to `/access?device=...` so the web app prefills it.
+
 ## URLs
 
 ```

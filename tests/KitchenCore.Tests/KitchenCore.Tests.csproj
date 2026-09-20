@@ -21,6 +21,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\KitchenCore.Core\KitchenCore.Core.csproj" />
     <ProjectReference Include="..\..\src\KitchenCore.Shared\KitchenCore.Shared.csproj" />
+    <ProjectReference Include="..\..\src\KitchenCore.Desktop\KitchenCore.Desktop.csproj" />
   </ItemGroup>
 
 </Project>
