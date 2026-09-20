@@ -1,0 +1,82 @@
+name: ci
+
+# Every push and every pull request. The release workflow assumes this already
+# passed, so it does not repeat the tests.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore -c Release
+
+      - name: Test
+        run: dotnet test --no-build -c Release --logger "console;verbosity=normal"
+
+      # The fixtures are committed data that the app also writes to. A test run
+      # must never change them: it copies each scenario to a temp directory
+      # first, and this is what proves it still does.
+      - name: Fixtures unchanged by the test run
+        run: |
+          if ! git diff --quiet -- fixtures/; then
+            echo "::error::The test run modified fixtures/. Tests must copy a scenario, not write to it."
+            git --no-pager diff --stat -- fixtures/
+            exit 1
+          fi
+          echo "fixtures/ untouched"
+
+  docker:
+    # Builds the image on every change so a broken Dockerfile is found here
+    # rather than on release day. Nothing is pushed.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          load: true
+          tags: kitchencore:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: It serves
+        run: |
+          docker run -d --name kc -p 8080:8080 kitchencore:ci
+
+          for i in $(seq 1 30); do
+            if curl -fsS http://localhost:8080/healthz > /dev/null 2>&1; then
+              echo "healthy after ${i}s"
+              break
+            fi
+            sleep 1
+          done
+
+          # A container that starts but serves nothing is the failure worth
+          # catching, so check a real page rather than only the health endpoint.
+          curl -fsS http://localhost:8080/healthz
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/)" = "200"
+          echo "the app is being served"
+
+          docker rm -f kc

@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Packaged full-trust (Win32) manifest for KitchenCore. __VERSION__ is substituted
+  by the release workflow with a 4-part version (e.g. 1.0.5.0).
+
+  The Publisher here is a self-signed identity, which is all a sideloaded build
+  needs: the release workflow generates a certificate whose subject matches this
+  string, signs the MSIX with it, and publishes the .cer alongside so it can be
+  trusted on the machines that install it. Submitting to the Microsoft Store
+  would mean replacing both Identity Name and Publisher with the values Partner
+  Center assigns.
+-->
+<Package
+    xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
+    xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
+    xmlns:uap3="http://schemas.microsoft.com/appx/manifest/uap/windows10/3"
+    xmlns:desktop="http://schemas.microsoft.com/appx/manifest/desktop/windows10"
+    xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
+    IgnorableNamespaces="uap uap3 desktop rescap">
+
+  <Identity Name="bwets.KitchenCore"
+            Publisher="CN=bwets"
+            Version="__VERSION__"
+            ProcessorArchitecture="x64" />
+
+  <Properties>
+    <DisplayName>KitchenCore</DisplayName>
+    <PublisherDisplayName>bwets</PublisherDisplayName>
+    <Logo>Images\StoreLogo.png</Logo>
+  </Properties>
+
+  <Dependencies>
+    <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.17763.0" MaxVersionTested="10.0.22621.0" />
+  </Dependencies>
+
+  <Resources>
+    <Resource Language="en-us" />
+    <Resource Language="fr" />
+  </Resources>
+
+  <Applications>
+    <Application Id="KitchenCore" Executable="KitchenCore.exe" EntryPoint="Windows.FullTrustApplication">
+      <uap:VisualElements
+          DisplayName="KitchenCore"
+          Description="The family week menu."
+          BackgroundColor="#3c6b4f"
+          Square150x150Logo="Images\Square150x150Logo.png"
+          Square44x44Logo="Images\Square44x44Logo.png">
+      </uap:VisualElements>
+      <Extensions>
+        <!-- Makes `KitchenCore` runnable from any terminal: the alias lands in
+             %LOCALAPPDATA%\Microsoft\WindowsApps, which is on PATH by default. -->
+        <uap3:Extension Category="windows.appExecutionAlias" Executable="KitchenCore.exe" EntryPoint="Windows.FullTrustApplication">
+          <uap3:AppExecutionAlias>
+            <desktop:ExecutionAlias Alias="KitchenCore.exe" />
+          </uap3:AppExecutionAlias>
+        </uap3:Extension>
+      </Extensions>
+    </Application>
+  </Applications>
+
+  <Capabilities>
+    <!-- The app hosts a server on loopback and reads a menu folder the user
+         chooses, both of which need full trust. -->
+    <rescap:Capability Name="runFullTrust" />
+  </Capabilities>
+</Package>

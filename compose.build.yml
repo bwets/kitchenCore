@@ -1,0 +1,12 @@
+# Build from this checkout instead of pulling the published image:
+#
+#   docker compose -f docker-compose.yml -f compose.build.yml up --build
+#
+# Useful for trying a change in the container the family will actually run,
+# rather than only under `dotnet run`.
+
+services:
+  kitchencore:
+    build: .
+    image: kitchencore:local
+    pull_policy: never

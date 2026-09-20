@@ -1,0 +1,209 @@
+name: release
+
+# Manual only -- never on push. Releasing is a decision, not a side effect of
+# committing.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Override version (leave empty for 1.0.<run_number>)"
+        required: false
+        default: ""
+      push_image:
+        description: "Push the Docker image to GitHub Container Registry"
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+  packages: write
+
+env:
+  IMAGE: ghcr.io/${{ github.repository_owner }}/kitchencore
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+    steps:
+      - id: v
+        run: |
+          if [ -n "${{ inputs.version }}" ]; then v="${{ inputs.version }}"; else v="1.0.${{ github.run_number }}"; fi
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+          echo "Release version: $v"
+
+  # The server, as a container. This is how the family actually runs it: one
+  # image on a box somewhere, with /app/data and /app/config bind-mounted.
+  docker:
+    needs: setup
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ needs.setup.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # arm64 as well as amd64: a home server is as likely to be a Raspberry Pi
+      # or an ARM NAS as an x64 box.
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        if: ${{ inputs.push_image }}
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: ${{ inputs.push_image }}
+          tags: |
+            ${{ env.IMAGE }}:${{ env.VERSION }}
+            ${{ env.IMAGE }}:latest
+          labels: |
+            org.opencontainers.image.title=KitchenCore
+            org.opencontainers.image.description=The family week menu
+            org.opencontainers.image.version=${{ env.VERSION }}
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # The desktop app: a portable zip and a sideloadable MSIX.
+  windows:
+    needs: setup
+    runs-on: windows-latest
+    env:
+      VERSION: ${{ needs.setup.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      # Self-contained: the people installing this should not have to think
+      # about a .NET runtime first.
+      - name: Publish (win-x64, self-contained)
+        shell: pwsh
+        run: |
+          dotnet publish src/KitchenCore.Desktop/KitchenCore.Desktop.csproj `
+            -c Release -r win-x64 --self-contained true `
+            -p:Version=$env:VERSION -o publish/win-x64
+
+      - name: Zip (portable)
+        shell: pwsh
+        run: Compress-Archive -Path publish/win-x64/* -DestinationPath "KitchenCore-$env:VERSION-win-x64.zip"
+
+      - name: Build MSIX (self-signed)
+        shell: pwsh
+        run: |
+          $pub = "publish/win-x64"
+          New-Item -ItemType Directory -Force "$pub/Images" | Out-Null
+
+          Add-Type -AssemblyName System.Drawing
+          $src = [System.Drawing.Image]::FromFile("$env:GITHUB_WORKSPACE/resources/icon_512.png")
+
+          function Logo($w, $h, $path) {
+            $b = New-Object System.Drawing.Bitmap $w, $h
+            $g = [System.Drawing.Graphics]::FromImage($b)
+            $g.InterpolationMode = 'HighQualityBicubic'
+            $g.SmoothingMode = 'HighQuality'
+            $g.PixelOffsetMode = 'HighQuality'
+            $g.Clear([System.Drawing.Color]::Transparent)
+            $g.DrawImage($src, (New-Object System.Drawing.Rectangle 0, 0, $w, $h))
+            $b.Save($path, [System.Drawing.Imaging.ImageFormat]::Png)
+            $g.Dispose(); $b.Dispose()
+          }
+
+          Logo 44 44 "$pub/Images/Square44x44Logo.png"
+          Logo 150 150 "$pub/Images/Square150x150Logo.png"
+          Logo 50 50 "$pub/Images/StoreLogo.png"
+          $src.Dispose()
+
+          # MSIX versions are four-part; ours are three.
+          (Get-Content packaging/windows/AppxManifest.xml -Raw).Replace("__VERSION__", "$env:VERSION.0") |
+            Set-Content "$pub/AppxManifest.xml"
+
+          $sdk = Get-ChildItem "C:/Program Files (x86)/Windows Kits/10/bin" -Directory |
+            Where-Object Name -match '^10\.' | Sort-Object Name -Descending | Select-Object -First 1
+          $makeappx = Join-Path $sdk.FullName "x64/makeappx.exe"
+          $signtool = Join-Path $sdk.FullName "x64/signtool.exe"
+
+          $msix = "KitchenCore-$env:VERSION-win-x64.msix"
+          & $makeappx pack /o /d $pub /p $msix
+          if ($LASTEXITCODE -ne 0) { throw "makeappx failed" }
+
+          # Sideloading requires a signature whose subject matches the manifest
+          # Publisher. The .cer ships alongside so it can be trusted on the
+          # machines that install this.
+          [xml]$m = Get-Content "$pub/AppxManifest.xml"
+          $cert = New-SelfSignedCertificate -Type CodeSigningCert `
+            -Subject $m.Package.Identity.Publisher `
+            -CertStoreLocation Cert:\CurrentUser\My -NotAfter (Get-Date).AddYears(5)
+
+          & $signtool sign /fd SHA256 /sha1 $cert.Thumbprint $msix
+          if ($LASTEXITCODE -ne 0) { throw "signtool failed" }
+
+          Export-Certificate -Cert $cert -FilePath "KitchenCore-$env:VERSION.cer" | Out-Null
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: |
+            KitchenCore-*-win-x64.zip
+            KitchenCore-*-win-x64.msix
+            KitchenCore-*.cer
+
+  release:
+    needs: [setup, docker, windows]
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ needs.setup.outputs.version }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+
+      - name: Generate checksums
+        run: |
+          cd dist
+          find . -type f \( -name '*.zip' -o -name '*.msix' \) -print0 \
+            | xargs -0 sha256sum > ../SHA256SUMS
+          cat ../SHA256SUMS
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ env.VERSION }}
+          name: KitchenCore ${{ env.VERSION }}
+          generate_release_notes: true
+          body: |
+            ## Server
+
+            ```
+            docker pull ${{ env.IMAGE }}:${{ env.VERSION }}
+            ```
+
+            Mount `/app/data` (the menu, git-synced) and `/app/config` (the token
+            and the device list, deliberately **not** synced).
+
+            ## Desktop
+
+            - `KitchenCore-${{ env.VERSION }}-win-x64.msix` — install this. It is
+              self-signed, so import `KitchenCore-${{ env.VERSION }}.cer` into
+              *Local Machine → Trusted People* first.
+            - `KitchenCore-${{ env.VERSION }}-win-x64.zip` — portable, no install.
+
+            The desktop app can run standalone, with the menu in a folder on that
+            machine and no server at all.
+          files: |
+            dist/**/*.zip
+            dist/**/*.msix
+            dist/**/*.cer
+            SHA256SUMS

@@ -24,6 +24,9 @@
     <!-- There is no appsettings.json and no launch profile here; the desktop
          app is configured by its own config.yaml. -->
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
+
+    <!-- Embedded exe icon: Explorer, the taskbar and pinned shortcuts all read it. -->
+    <ApplicationIcon>$(MSBuildProjectDirectory)/../../resources/icon.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>

@@ -1,18 +1,42 @@
+# KitchenCore, for a box on the family network.
+#
+#   docker compose up -d
+#
+# Then open http://<that box>:8080 and ask for access. The first device to
+# present the adminBootstrapCode from config/app.yaml becomes the admin, and
+# approves everyone else.
+
 services:
   kitchencore:
-    build: .
-    image: kitchencore:latest
+    image: ghcr.io/bwets/kitchencore:latest
     container_name: kitchencore
     restart: unless-stopped
+
     ports:
       - "8080:8080"
+
     volumes:
-      # The brief only calls for /app/data, but config has to persist too: it
-      # holds the GitHub token and the approved-device list. It is mounted
-      # separately and deliberately kept OUT of the git-synced data folder.
+      # The menu. This is the folder to point at a git clone: the app commits
+      # and pushes it by itself, attributing each commit to whoever made the
+      # change. If it is not a repository, nothing syncs and the app says so in
+      # its header rather than pretending.
       - ./data:/app/data
+
+      # The GitHub token and the list of approved devices. Deliberately NOT
+      # inside the folder above, so secrets never end up in the synced history.
       - ./config:/app/config
+
     environment:
-      # Prefer the environment over writing the token into config/app.yaml.
+      # Prefer this over writing the token into config/app.yaml, where a backup
+      # or a screen-share would expose it.
       KITCHENCORE_GIT__TOKEN: "${KITCHENCORE_GIT_TOKEN:-}"
+
+      # Menus are local things: a delivery at 09:30 should say 09:30.
       TZ: "${TZ:-Europe/Brussels}"
+
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/healthz"]
+      interval: 30s
+      timeout: 3s
+      start_period: 15s
+      retries: 3

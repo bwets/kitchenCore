@@ -32,7 +32,12 @@ COPY --from=build /publish ./bin
 
 RUN mkdir -p /app/data/menu /app/data/shopping /app/config
 
+# The content root has to be named explicitly. It defaults to the working
+# directory, which is /app -- but the brief puts the binaries in /app/bin, and
+# that is where the published wwwroot lives. Without this the app starts, serves
+# /healthz perfectly happily, and returns every asset as 200 with zero bytes.
 ENV ASPNETCORE_HTTP_PORTS=8080 \
+    ASPNETCORE_CONTENTROOT=/app/bin \
     KITCHENCORE_DATA_PATH=/app/data \
     KITCHENCORE_CONFIG_PATH=/app/config
 
