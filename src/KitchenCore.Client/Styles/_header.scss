@@ -15,14 +15,27 @@
   background: var(--surface-container-low);
   border-bottom: 1px solid var(--outline-variant);
 
+  // The wordmark. A link home, but it should not look like one: underlined text
+  // sitting among the tabs reads as another piece of navigation rather than as
+  // the name of the thing.
   &__brand {
     display: inline-flex;
     align-items: center;
     gap: $space-2;
-    font-weight: 650;
-    letter-spacing: -0.01em;
-    white-space: nowrap;
     color: var(--on-surface);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  &__name {
+    // Fraunces is a soft, slightly quirky serif -- warm rather than corporate,
+    // which is the register a family kitchen app wants. Display sizes need less
+    // tracking than body text, hence the tightening.
+    font-family: "Fraunces", "Segoe UI Variable", Georgia, serif;
+    font-weight: 600;
+    font-size: 1.22rem;
+    letter-spacing: -0.015em;
+    line-height: 1;
   }
 
   &__mark {

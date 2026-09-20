@@ -143,7 +143,9 @@ reading before changing the storage layer or the desktop build.
 
 .NET 10, Blazor WebAssembly over a minimal API, Fluent UI components on a
 Material You palette, [PhotinoX](https://github.com/tryphotino) for the desktop
-window, YamlDotNet, Markdig.
+window, YamlDotNet, Markdig. The wordmark is set in
+[Fraunces](https://github.com/undercasetype/Fraunces) (OFL), bundled rather than
+linked so it still renders with the Wi-Fi down.
 
 ## Licence
 
