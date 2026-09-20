@@ -14,6 +14,7 @@ builder.Services.AddSingleton<SystemStatusService>();
 builder.Services.AddSingleton<MenuClient>();
 builder.Services.AddSingleton<DragController>();
 builder.Services.AddSingleton<AuthService>();
+builder.Services.AddSingleton<UiInterop>();
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<IShoppingSchedule, PredictedShoppingSchedule>();
 builder.Services.AddSingleton<CulturePreference>();

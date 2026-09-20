@@ -1,0 +1,219 @@
+@implements IAsyncDisposable
+@inject MenuClient Menu
+@inject AuthService Auth
+@inject UiInterop Ui
+@inject IStringLocalizer<Strings> L
+
+@*
+    Requests, in the two shapes the two roles need.
+
+    A requestor only ever adds one, so they get a dialog: it is a single field
+    and a button, and it has no business occupying the screen beside the
+    calendar.
+
+    An editor needs to place them, so they get a sidebar of draggable requests
+    that slides in over the grid. It is opened deliberately rather than sitting
+    there permanently, because most of the time the calendar wants the width.
+*@
+
+@if (Mode == RequestPanelMode.Ask)
+{
+    <div class="dialog-scrim" @onclick="Close"></div>
+
+    <div class="dialog dialog--choice" role="dialog" aria-modal="true" aria-label="@L["Requests_AskTitle"]">
+        <h2 class="dialog__title">@L["Requests_AskTitle"]</h2>
+        <p class="dialog__subtitle">@L["Requests_AskIntro"]</p>
+
+        <label class="field">
+            <span class="field__label">@L["Entry_Title"]</span>
+            <input class="field__input" @ref="_titleField" value="@_title"
+                   @oninput="e => _title = e.Value?.ToString() ?? string.Empty"
+                   @onkeydown="OnKeyDown" />
+        </label>
+
+        <label class="field">
+            <span class="field__label">@L["Entry_Notes"]</span>
+            <textarea class="field__input field__input--area" rows="2" value="@_notes"
+                      @oninput="e => _notes = e.Value?.ToString() ?? string.Empty"></textarea>
+        </label>
+
+        @if (Requests.Count > 0)
+        {
+            <ul class="asked">
+                @foreach (var request in Requests)
+                {
+                    <li>
+                        <span>@request.Title</span>
+                        @if (!string.IsNullOrWhiteSpace(request.By))
+                        {
+                            <span class="asked__by">@request.By</span>
+                        }
+                    </li>
+                }
+            </ul>
+        }
+
+        <footer class="dialog__foot">
+            <span class="dialog__spacer"></span>
+            <button type="button" class="button" @onclick="Close">@L["Cancel"]</button>
+            <button type="button" class="button button--primary"
+                    disabled="@string.IsNullOrWhiteSpace(_title)"
+                    @onclick="AddAsync">
+                @L["Requests_Add"]
+            </button>
+        </footer>
+    </div>
+}
+else if (Mode == RequestPanelMode.Place)
+{
+    <div class="dialog-scrim dialog-scrim--soft" @onclick="Close"></div>
+
+    <aside class="sidebar" aria-label="@L["Requests_Title"]">
+        <header class="sidebar__head">
+            <h2 class="sidebar__title">@L["Requests_Title"]</h2>
+            <button type="button" class="sidebar__close" @onclick="Close" aria-label="@L["Cancel"]">×</button>
+        </header>
+
+        @if (Requests.Count == 0)
+        {
+            <p class="sidebar__empty">@L["Requests_Empty"]</p>
+        }
+        else
+        {
+            <p class="sidebar__hint">@L["Requests_DragHint"]</p>
+
+            <ul class="sidebar__list">
+                @foreach (var request in Requests)
+                {
+                    <li>
+                        @* A drag source with no date of its own -- which is what
+                           makes it a request rather than an entry. *@
+                        <div class="sidebar__item"
+                             data-drag-request="@request.Ordinal"
+                             data-drag-title="@request.Title"
+                             title="@request.Notes">
+                            <span class="sidebar__item-title">@request.Title</span>
+                            @if (!string.IsNullOrWhiteSpace(request.By))
+                            {
+                                <span class="sidebar__item-by">@request.By</span>
+                            }
+                            <button type="button" class="sidebar__drop"
+                                    title="@L["Requests_Drop"]"
+                                    @onclick="() => DropAsync(request)">×</button>
+                        </div>
+                    </li>
+                }
+            </ul>
+        }
+
+        @if (CanRequest)
+        {
+            <div class="sidebar__add">
+                <input class="field__input" placeholder="@L["Requests_Placeholder"]" value="@_title"
+                       @oninput="e => _title = e.Value?.ToString() ?? string.Empty"
+                       @onkeydown="OnKeyDown" />
+                <button type="button" class="button button--primary"
+                        disabled="@string.IsNullOrWhiteSpace(_title)"
+                        @onclick="AddAsync">
+                    @L["Requests_Add"]
+                </button>
+            </div>
+        }
+    </aside>
+}
+
+@code {
+    private string _title = string.Empty;
+    private string _notes = string.Empty;
+    private ElementReference _titleField;
+    private bool _focusPending;
+    private RequestPanelMode _lastMode = RequestPanelMode.Closed;
+    private DotNetObjectReference<RequestPanel>? _self;
+
+    [Parameter]
+    public RequestPanelMode Mode { get; set; }
+
+    [Parameter]
+    public IReadOnlyList<MenuRequest> Requests { get; set; } = [];
+
+    [Parameter]
+    public EventCallback OnChanged { get; set; }
+
+    [Parameter]
+    public EventCallback OnClosed { get; set; }
+
+    private bool CanRequest => Auth.Identity.CanRequest(Section.Menu);
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Mode != _lastMode)
+        {
+            _lastMode = Mode;
+            _focusPending = Mode == RequestPanelMode.Ask;
+        }
+
+        if (Mode != RequestPanelMode.Closed)
+        {
+            _self ??= DotNetObjectReference.Create(this);
+            await Ui.RegisterEscapeAsync(_self);
+        }
+        else if (_self is not null)
+        {
+            await Ui.UnregisterEscapeAsync(_self);
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_focusPending)
+        {
+            _focusPending = false;
+            await Ui.FocusAndSelectAsync(_titleField);
+        }
+    }
+
+    [JSInvokable]
+    public async Task HandleEscape() => await Close();
+
+    private async Task OnKeyDown(KeyboardEventArgs args)
+    {
+        if (args.Key == "Enter")
+        {
+            await AddAsync();
+        }
+    }
+
+    private async Task AddAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_title))
+        {
+            return;
+        }
+
+        if (await Menu.AddRequestAsync(_title.Trim(), string.IsNullOrWhiteSpace(_notes) ? null : _notes.Trim()))
+        {
+            _title = string.Empty;
+            _notes = string.Empty;
+            await OnChanged.InvokeAsync();
+        }
+    }
+
+    private async Task DropAsync(MenuRequest request)
+    {
+        if (await Menu.DropRequestAsync(request))
+        {
+            await OnChanged.InvokeAsync();
+        }
+    }
+
+    private Task Close() => OnClosed.InvokeAsync();
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_self is not null)
+        {
+            await Ui.UnregisterEscapeAsync(_self);
+            _self.Dispose();
+        }
+    }
+}

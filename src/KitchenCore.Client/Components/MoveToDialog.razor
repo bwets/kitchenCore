@@ -1,4 +1,6 @@
 @inject SystemStatusService Status
+@implements IAsyncDisposable
+@inject UiInterop Ui
 @inject IStringLocalizer<Strings> L
 
 @*
@@ -48,6 +50,20 @@
 }
 
 @code {
+    private DotNetObjectReference<MoveToDialog>? _self;
+
+    [JSInvokable]
+    public async Task HandleEscape() => await Cancel();
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_self is not null)
+        {
+            await Ui.UnregisterEscapeAsync(_self);
+            _self.Dispose();
+        }
+    }
+
     private DateOnly _date;
     private string _slot = string.Empty;
     private bool _copy;
@@ -68,6 +84,16 @@
 
     protected override async Task OnParametersSetAsync()
     {
+        if (Entry is not null)
+        {
+            _self ??= DotNetObjectReference.Create(this);
+            await Ui.RegisterEscapeAsync(_self);
+        }
+        else if (_self is not null)
+        {
+            await Ui.UnregisterEscapeAsync(_self);
+        }
+
         if (_slots.Count == 0)
         {
             _slots = (await Status.GetAsync()).Slots;

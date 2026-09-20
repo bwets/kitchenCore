@@ -127,4 +127,13 @@
   <data name="Requests_Add" xml:space="preserve"><value>Demander</value></data>
   <data name="Requests_Placeholder" xml:space="preserve"><value>Une envie…</value></data>
   <data name="Sync_Pending" xml:space="preserve"><value>En attente de synchronisation.</value></data>
+  <data name="Close" xml:space="preserve"><value>Fermer</value></data>
+  <data name="Entry_NotesHint" xml:space="preserve"><value>Markdown accepté.</value></data>
+  <data name="Slots_All" xml:space="preserve"><value>Tous les repas</value></data>
+  <data name="Slots_Fewer" xml:space="preserve"><value>Moins de repas</value></data>
+  <data name="Requests_Ask" xml:space="preserve"><value>Demander un plat</value></data>
+  <data name="Requests_AskTitle" xml:space="preserve"><value>Demander un plat</value></data>
+  <data name="Requests_AskIntro" xml:space="preserve"><value>Cela ira sur la liste de qui prépare la semaine.</value></data>
+  <data name="Requests_DragHint" xml:space="preserve"><value>Glissez-en un sur un jour pour le planifier.</value></data>
+  <data name="Requests_Drop" xml:space="preserve"><value>Retirer</value></data>
 </root>

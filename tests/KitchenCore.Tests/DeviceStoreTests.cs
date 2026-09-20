@@ -23,6 +23,7 @@ public class DeviceStoreTests
     public async Task A_new_device_is_known_but_not_approved()
     {
         using var scenario = FixtureScenario.Open("empty");
+        scenario.ClearDevices();
         var name = Name;
         var devices = StoreFor(scenario);
 
@@ -39,6 +40,7 @@ public class DeviceStoreTests
     public async Task The_raw_token_is_never_written_to_disk()
     {
         using var scenario = FixtureScenario.Open("empty");
+        scenario.ClearDevices();
         var name = Name;
         var devices = StoreFor(scenario);
 
@@ -55,6 +57,7 @@ public class DeviceStoreTests
     public async Task An_unknown_token_is_anonymous()
     {
         using var scenario = FixtureScenario.Open("empty");
+        scenario.ClearDevices();
         var name = Name;
         var devices = StoreFor(scenario);
 
@@ -68,6 +71,7 @@ public class DeviceStoreTests
     public async Task The_bootstrap_code_creates_the_first_admin()
     {
         using var scenario = FixtureScenario.Open("basic");
+        scenario.ClearDevices();
         var name = Name;
         var devices = StoreFor(scenario);
 
@@ -90,6 +94,7 @@ public class DeviceStoreTests
     public async Task A_wrong_bootstrap_code_grants_nothing()
     {
         using var scenario = FixtureScenario.Open("basic");
+        scenario.ClearDevices();
         var name = Name;
         var devices = StoreFor(scenario);
 
@@ -107,6 +112,7 @@ public class DeviceStoreTests
     public async Task Approving_with_a_role_grants_exactly_that_role()
     {
         using var scenario = FixtureScenario.Open("basic");
+        scenario.ClearDevices();
         var name = Name;
         var devices = StoreFor(scenario);
 
@@ -131,6 +137,7 @@ public class DeviceStoreTests
     public async Task An_unapproved_device_holds_no_roles_even_if_some_were_set()
     {
         using var scenario = FixtureScenario.Open("basic");
+        scenario.ClearDevices();
         var name = Name;
         var devices = StoreFor(scenario);
 
@@ -151,6 +158,7 @@ public class DeviceStoreTests
     public async Task Revoking_a_device_makes_its_token_anonymous()
     {
         using var scenario = FixtureScenario.Open("basic");
+        scenario.ClearDevices();
         var name = Name;
         var devices = StoreFor(scenario);
 
@@ -165,6 +173,7 @@ public class DeviceStoreTests
     public async Task The_listing_never_exposes_a_token()
     {
         using var scenario = FixtureScenario.Open("basic");
+        scenario.ClearDevices();
         var name = Name;
         var devices = StoreFor(scenario);
 

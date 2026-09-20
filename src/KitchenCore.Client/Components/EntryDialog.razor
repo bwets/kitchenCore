@@ -1,4 +1,7 @@
+@implements IAsyncDisposable
 @inject MenuClient Menu
+@inject AuthService Auth
+@inject UiInterop Ui
 @inject IStringLocalizer<Strings> L
 
 @*
@@ -22,15 +25,27 @@
             </div>
         </header>
 
-        <label class="field">
-            <span class="field__label">@L["Entry_Title"]</span>
-            <input class="field__input"
-                   list="known-titles"
-                   autofocus
-                   value="@_title"
-                   @oninput="e => _title = e.Value?.ToString() ?? string.Empty"
-                   @onkeydown="OnKeyDown" />
-        </label>
+        @if (!CanEdit)
+        {
+            @* A disabled input still looks like a control that ought to work,
+               which is a worse lie than plain text. A viewer gets values. *@
+            <div class="field">
+                <span class="field__label">@L["Entry_Title"]</span>
+                <div class="field__value">@_title</div>
+            </div>
+        }
+        else
+        {
+            <label class="field">
+                <span class="field__label">@L["Entry_Title"]</span>
+                <input class="field__input"
+                       list="known-titles"
+                       @ref="_titleField"
+                       value="@_title"
+                       @oninput="e => _title = e.Value?.ToString() ?? string.Empty"
+                       @onkeydown="OnKeyDown" />
+            </label>
+        }
 
         @* Every title already used, so repeating a favourite is a couple of
            keystrokes rather than retyping it. *@
@@ -41,23 +56,52 @@
             }
         </datalist>
 
-        <label class="field">
-            <span class="field__label">@L["Entry_Notes"]</span>
-            <textarea class="field__input field__input--area"
-                      rows="3"
-                      value="@_notes"
-                      @oninput="e => _notes = e.Value?.ToString() ?? string.Empty"></textarea>
-        </label>
+        @if (!CanEdit)
+        {
+            <div class="field">
+                <span class="field__label">@L["Entry_Notes"]</span>
+                <div class="field__value"><MarkdownText Text="@_notes" /></div>
+            </div>
+        }
+        else
+        {
+            <label class="field">
+                <span class="field__label">@L["Entry_Notes"]</span>
+                <textarea class="field__input field__input--area"
+                          rows="3"
+                          value="@_notes"
+                          @oninput="e => _notes = e.Value?.ToString() ?? string.Empty"></textarea>
+                <span class="field__hint">@L["Entry_NotesHint"]</span>
+            </label>
+        }
 
-        <label class="field">
-            <span class="field__label">@L["Entry_Links"]</span>
-            <textarea class="field__input field__input--area"
-                      rows="2"
-                      placeholder="https://..."
-                      value="@_links"
-                      @oninput="e => _links = e.Value?.ToString() ?? string.Empty"></textarea>
-            <span class="field__hint">@L["Entry_LinksHint"]</span>
-        </label>
+        @if (!CanEdit)
+        {
+            @if (Target?.Entry.Links.Count > 0)
+            {
+                <div class="field">
+                    <span class="field__label">@L["Entry_Links"]</span>
+                    <ul class="field__links">
+                        @foreach (var link in Target.Entry.Links)
+                        {
+                            <li><a href="@link" target="_blank" rel="noopener noreferrer">@link</a></li>
+                        }
+                    </ul>
+                </div>
+            }
+        }
+        else
+        {
+            <label class="field">
+                <span class="field__label">@L["Entry_Links"]</span>
+                <textarea class="field__input field__input--area"
+                          rows="2"
+                          placeholder="https://..."
+                          value="@_links"
+                          @oninput="e => _links = e.Value?.ToString() ?? string.Empty"></textarea>
+                <span class="field__hint">@L["Entry_LinksHint"]</span>
+            </label>
+        }
 
         @if (_error is { Length: > 0 })
         {
@@ -65,7 +109,7 @@
         }
 
         <footer class="dialog__foot">
-            @if (IsExisting)
+            @if (IsExisting && CanEdit)
             {
                 <button type="button" class="button button--danger" @onclick="DeleteAsync" disabled="@_busy">
                     @L["Entry_Delete"]
@@ -74,10 +118,17 @@
 
             <span class="dialog__spacer"></span>
 
-            <button type="button" class="button" @onclick="Cancel" disabled="@_busy">@L["Cancel"]</button>
-            <button type="button" class="button button--primary" @onclick="SaveAsync" disabled="@(_busy || string.IsNullOrWhiteSpace(_title))">
-                @L["Save"]
+            <button type="button" class="button" @onclick="Cancel" disabled="@_busy">
+                @(CanEdit ? L["Cancel"] : L["Close"])
             </button>
+
+            @if (CanEdit)
+            {
+                <button type="button" class="button button--primary" @onclick="SaveAsync"
+                        disabled="@(_busy || string.IsNullOrWhiteSpace(_title))">
+                    @L["Save"]
+                </button>
+            }
         </footer>
     </div>
 }
@@ -90,6 +141,9 @@
     private bool _busy;
     private IReadOnlyList<string> _knownTitles = [];
     private MenuEntryRef? _lastTarget;
+    private ElementReference _titleField;
+    private bool _focusPending;
+    private DotNetObjectReference<EntryDialog>? _self;
 
     /// <summary>The cell being edited. Null closes the dialog.</summary>
     [Parameter]
@@ -108,6 +162,8 @@
     /// <summary>True when editing something that already exists, rather than creating.</summary>
     private bool IsExisting => Target is { Entry.Title.Length: > 0 };
 
+    private bool CanEdit => Auth.Identity.CanEdit(Section.Menu);
+
     protected override async Task OnParametersSetAsync()
     {
         // Reset only when the dialog opens on a different cell, or typing would be
@@ -117,6 +173,9 @@
             _lastTarget = Target;
             _error = null;
 
+            // Focus after the render that actually shows the field.
+            _focusPending = Target is not null && CanEdit;
+
             _title = Target?.Entry.Title ?? string.Empty;
             _notes = Target?.Entry.Notes ?? string.Empty;
             _links = Target is null ? string.Empty : string.Join('\n', Target.Entry.Links);
@@ -125,6 +184,40 @@
         if (Target is not null && _knownTitles.Count == 0)
         {
             _knownTitles = await Menu.TitlesAsync();
+        }
+
+        if (Target is not null)
+        {
+            _self ??= DotNetObjectReference.Create(this);
+            await Ui.RegisterEscapeAsync(_self);
+        }
+        else if (_self is not null)
+        {
+            await Ui.UnregisterEscapeAsync(_self);
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_focusPending)
+        {
+            _focusPending = false;
+
+            // Selecting the existing title means editing is "type the new name",
+            // not "clear the old one first".
+            await Ui.FocusAndSelectAsync(_titleField);
+        }
+    }
+
+    [JSInvokable]
+    public async Task HandleEscape() => await Cancel();
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_self is not null)
+        {
+            await Ui.UnregisterEscapeAsync(_self);
+            _self.Dispose();
         }
     }
 

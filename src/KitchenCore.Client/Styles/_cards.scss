@@ -171,7 +171,9 @@
 // as the weeks go past, and each week's label sticks just beneath it.
 .week-bands {
   display: grid;
-  gap: $space-4;
+  // Tight, now that each week names itself in its own corner cell rather than in
+  // a heading above the grid.
+  gap: $space-3;
 }
 
 .week-band__label {
@@ -450,4 +452,120 @@
     display: grid;
     gap: $space-2;
   }
+}
+
+// Shopping moments in the list view. The same blue and green as the calendar
+// lines, because they are the same two moments.
+.list-day__marker {
+  display: inline-block;
+  margin-left: $space-1;
+  padding: 0 4px;
+  border-radius: $radius-xs;
+  color: #fff;
+  font-size: 0.6rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  vertical-align: middle;
+
+  &--order { background: var(--marker-order); }
+
+  &--delivery { background: var(--marker-delivery); }
+}
+
+// An empty day still has to be a visible drop target, or the list view cannot
+// be planned in -- only read.
+.list-entry__empty {
+  color: var(--outline);
+}
+
+// The list view as a table: a row per day, a column per meal. Every day is
+// present -- a day you cannot see is a day you cannot drop onto -- but a month
+// of empty days has to stay readable, which stacked lines were not.
+.list-grid {
+  display: grid;
+  grid-template-columns: 6rem repeat(var(--slot-count), minmax(0, 1fr));
+  gap: 1px;
+  background: var(--outline-variant);
+  border: 1px solid var(--outline-variant);
+  border-radius: $radius-sm;
+  overflow: hidden;
+
+  > * { background: var(--surface-container-lowest); }
+
+  &__corner { background: var(--surface-container-low); }
+
+  &__slot {
+    padding: $space-1 $space-2;
+    background: var(--surface-container-low);
+    color: var(--slot-accent);
+    font-size: 0.66rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  &__date {
+    display: flex;
+    align-items: center;
+    gap: $space-1;
+    padding: $space-1 $space-2;
+    background: var(--surface-container-low);
+    color: var(--on-surface-variant);
+    font-size: 0.78rem;
+    text-transform: capitalize;
+
+    &.is-today {
+      background: var(--primary-container);
+      color: var(--on-primary-container);
+      font-weight: 700;
+    }
+  }
+
+  &__cell {
+    display: flex;
+    align-items: stretch;
+    min-height: 2rem;
+
+    &.is-over {
+      outline: 2px solid var(--primary);
+      outline-offset: -2px;
+      background: var(--primary-container);
+    }
+  }
+
+  &__entry {
+    flex: 1 1 0;
+    min-height: 0;
+    padding: $space-1 $space-2;
+    border: 0;
+    background: transparent;
+    color: var(--on-surface);
+    font-size: 0.82rem;
+    text-align: left;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+
+    &:hover { background: var(--surface-container); }
+  }
+
+  &__add {
+    flex: 1 1 0;
+    min-height: 0;
+    border: 0;
+    background: transparent;
+    color: var(--outline);
+    font-size: 0.9rem;
+    opacity: 0;
+
+    &:hover, &:focus-visible { opacity: 1; background: var(--surface-container); }
+
+    @media (hover: none) { opacity: 0.4; }
+  }
+}
+
+// The week you are in, called out so a month of weeks has an anchor.
+.list-week.is-current > .list-week__head {
+  background: var(--primary-container);
+  color: var(--on-primary-container);
 }

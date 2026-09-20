@@ -62,6 +62,36 @@ public sealed class FixtureScenario : IDisposable
         File.WriteAllText(Path.Combine(MenuRoot, fileName), content);
     }
 
+    /// <summary>
+    /// Removes any device registrations the copied scenario came with.
+    ///
+    /// The app writes config/devices.yaml the moment a device asks for access,
+    /// so a fixture that has been used through the browser carries one. A test
+    /// about the first admin has to start from "there is no admin" whatever the
+    /// working tree looks like.
+    /// </summary>
+    public void ClearDevices()
+    {
+        if (File.Exists(Paths.DevicesFile))
+        {
+            File.Delete(Paths.DevicesFile);
+        }
+    }
+
+    /// <summary>Removes any menu content, leaving the scenario's config in place.</summary>
+    public void ClearMenu()
+    {
+        if (!Directory.Exists(MenuRoot))
+        {
+            return;
+        }
+
+        foreach (var file in Directory.EnumerateFiles(MenuRoot, "*.yaml"))
+        {
+            File.Delete(file);
+        }
+    }
+
     public IEnumerable<string> MenuFileNames() => Directory.Exists(MenuRoot)
         ? Directory.EnumerateFiles(MenuRoot, "*.yaml").Select(f => Path.GetFileName(f))
         : [];

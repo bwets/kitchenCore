@@ -2,7 +2,9 @@
 @implements IAsyncDisposable
 @inject MenuClient Menu
 @inject SystemStatusService Status
+@inject IShoppingSchedule Shopping
 @inject DragController Drag
+@inject UiInterop Ui
 @inject IStringLocalizer<Strings> L
 
 @*
@@ -24,6 +26,14 @@
 
     <span class="week-bar__range">@_start.ToString("MMMM yyyy")</span>
     <span class="week-bar__spacer"></span>
+
+    @if (_showAllSlots || SlotVisibility.HasHidden(_allSlots, _range?.Days ?? [], _showAllSlots))
+    {
+        <button type="button" class="week-bar__button @(_showAllSlots ? "is-on" : null)"
+                @onclick="() => _showAllSlots = !_showAllSlots">
+            @(_showAllSlots ? L["Slots_Fewer"] : L["Slots_All"])
+        </button>
+    }
 
     @if (_loading)
     {
@@ -49,7 +59,7 @@
     {
         @foreach (var week in Weeks())
         {
-            <section class="list-week">
+            <section class="list-week @(IsThisWeek(week.Key) ? "is-current" : null)">
                 <button type="button" class="list-week__head" @onclick="() => Toggle(week.Key)">
                     <span class="list-week__chevron @(IsOpen(week.Key) ? "is-open" : null)" aria-hidden="true">›</span>
                     <span>@WeekLabel(week)</span>
@@ -58,63 +68,88 @@
 
                 @if (IsOpen(week.Key))
                 {
-                    <ul class="list-days">
-                        @foreach (var day in week.Where(d => d.Cells.Any(c => !c.IsEmpty)))
+                    @* A row per day and a column per slot. Every day is present,
+                       including empty ones -- a day you cannot see is a day you
+                       cannot drop onto, which would make this view read-only.
+                       Laid out as a table rather than stacked lines, or a month
+                       of mostly-empty days becomes a page of dashes. *@
+                    <div class="list-grid" style="--slot-count:@VisibleSlots(week).Count">
+                        <span class="list-grid__corner"></span>
+
+                        @foreach (var slot in VisibleSlots(week))
                         {
-                            <li class="list-day">
-                                <span class="list-day__date @(IsToday(day.Date) ? "is-today" : null)">
-                                    @day.Date.ToString("ddd d")
-                                </span>
-
-                                <ul class="list-entries">
-                                    @foreach (var slot in _slots)
-                                    {
-                                        var cell = day.Cells.FirstOrDefault(c =>
-                                            string.Equals(c.Slot, slot.Key, StringComparison.OrdinalIgnoreCase));
-
-                                        <li class="list-entry @SlotTone.CssClass(slot.Key)"
-                                            data-drop-date="@day.Date.ToString("yyyy-MM-dd")"
-                                            data-drop-slot="@slot.Key">
-
-                                            <span class="list-entry__slot">@slot.Label(Culture)</span>
-
-                                            @if (cell is null || cell.IsEmpty)
-                                            {
-                                                <span class="list-entry__empty">—</span>
-                                            }
-                                            else
-                                            {
-                                                @for (var i = 0; i < cell.Entries.Count; i++)
-                                                {
-                                                    var index = i;
-                                                    var entry = cell.Entries[index];
-                                                    var reference = new MenuEntryRef(day.Date, slot.Key, index, entry);
-
-                                                    <button type="button" class="list-entry__title"
-                                                            data-drag-date="@day.Date.ToString("yyyy-MM-dd")"
-                                                            data-drag-slot="@slot.Key"
-                                                            data-drag-index="@index"
-                                                            data-drag-title="@entry.Title">
-                                                        @entry.Title
-                                                    </button>
-                                                }
-
-                                                @if (cell.IsDuplicated)
-                                                {
-                                                    <span class="menu-cell__flag">@L["Duplicate_Short"]</span>
-                                                }
-                                            }
-                                        </li>
-                                    }
-                                </ul>
-                            </li>
+                            <span class="list-grid__slot @SlotTone.CssClass(slot.Key)">@slot.Label(Culture)</span>
                         }
-                    </ul>
+
+                        @foreach (var day in week)
+                        {
+                            <span class="list-grid__date @(IsToday(day.Date) ? "is-today" : null)"
+                                  id="@(IsToday(day.Date) ? "today" : null)">
+                                @day.Date.ToString("ddd d")
+
+                                @foreach (var marker in MarkersOn(day.Date))
+                                {
+                                    <span class="list-day__marker list-day__marker--@marker.Kind"
+                                          title="@marker.Label">
+                                        @marker.At.ToString("HH:mm")
+                                    </span>
+                                }
+                            </span>
+
+                            @foreach (var slot in VisibleSlots(week))
+                            {
+                                var cell = day.Cells.FirstOrDefault(c =>
+                                    string.Equals(c.Slot, slot.Key, StringComparison.OrdinalIgnoreCase));
+
+                                <div class="list-grid__cell @SlotTone.CssClass(slot.Key)"
+                                     data-drop-date="@day.Date.ToString("yyyy-MM-dd")"
+                                     data-drop-slot="@slot.Key">
+
+                                    @if (cell is null || cell.IsEmpty)
+                                    {
+                                        <button type="button" class="list-grid__add"
+                                                title="@L["Grid_Add"]"
+                                                @onclick="() => OnCreate(day.Date, slot.Key)">
+                                            <span aria-hidden="true">+</span>
+                                        </button>
+                                    }
+                                    else
+                                    {
+                                        @for (var i = 0; i < cell.Entries.Count; i++)
+                                        {
+                                            var index = i;
+                                            var entry = cell.Entries[index];
+
+                                            <button type="button" class="list-grid__entry"
+                                                    title="@entry.Title"
+                                                    data-drag-date="@day.Date.ToString("yyyy-MM-dd")"
+                                                    data-drag-slot="@slot.Key"
+                                                    data-drag-index="@index"
+                                                    data-drag-title="@entry.Title"
+                                                    @onclick="() => _editing = new MenuEntryRef(day.Date, slot.Key, index, entry)">
+                                                @entry.Title
+                                            </button>
+                                        }
+
+                                        @if (cell.IsDuplicated)
+                                        {
+                                            <span class="menu-cell__flag">@L["Duplicate_Short"]</span>
+                                        }
+                                    }
+                                </div>
+                            }
+                        }
+                    </div>
                 }
             </section>
         }
     }
 </div>
+
+<EntryDialog Target="@_editing"
+             Version="@_range?.Version"
+             OnSaved="OnSavedAsync"
+             OnCancelled="@(() => _editing = null)" />
 
 <DropChoiceDialog Request="@_pendingDrop"
                   OnChosen="OnDropChoiceAsync"
@@ -122,18 +157,40 @@
 
 @code {
     private MenuRangeResponse? _range;
-    private IReadOnlyList<SlotDefinition> _slots = [];
+    private IReadOnlyList<SlotDefinition> _allSlots = [];
+    private List<DayMarker> _markers = [];
+    private bool _showAllSlots;
+    private bool _scrollPending;
+
+    private IReadOnlyList<SlotDefinition> VisibleSlots(IGrouping<DateOnly, MenuDay> week) =>
+        SlotVisibility.Visible(_allSlots, [.. week], _showAllSlots);
+
+    private IEnumerable<DayMarker> MarkersOn(DateOnly date) =>
+        _markers.Where(m => DateOnly.FromDateTime(m.At) == date);
     private DateOnly _start;
     private DayOfWeek _weekStart = DayOfWeek.Monday;
     private bool _loading = true;
     private bool _conflict;
     private DropRequest? _pendingDrop;
+    private MenuEntryRef? _editing;
+
+    private void OnCreate(DateOnly date, string slot) =>
+        _editing = new MenuEntryRef(date, slot, 0, new MenuEntry { Title = string.Empty });
+
+    private async Task OnSavedAsync()
+    {
+        _editing = null;
+        await LoadAsync();
+    }
     private readonly HashSet<DateOnly> _collapsed = [];
 
     private static string Culture =>
         System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
 
     private static bool IsToday(DateOnly date) => date == DateOnly.FromDateTime(DateTime.Now);
+
+    private bool IsThisWeek(DateOnly weekStart) =>
+        weekStart == StartOfWeek(DateOnly.FromDateTime(DateTime.Now));
 
     protected override async Task OnInitializedAsync()
     {
@@ -142,7 +199,7 @@
         await Drag.AttachAsync();
 
         var status = await Status.GetAsync();
-        _slots = status.Slots;
+        _allSlots = status.Slots;
         _weekStart = status.WeekStart;
 
         var today = DateOnly.FromDateTime(DateTime.Now);
@@ -157,6 +214,19 @@
         await ValueTask.CompletedTask;
     }
 
+    /// <summary>
+    /// Brings today into view once the month has rendered. A month opens at the
+    /// 1st, which is rarely where anyone wants to start reading.
+    /// </summary>
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_scrollPending)
+        {
+            _scrollPending = false;
+            await Ui.ScrollIntoViewAsync("today");
+        }
+    }
+
     private async Task LoadAsync()
     {
         _loading = true;
@@ -168,6 +238,18 @@
         var to = StartOfWeek(_start.AddMonths(1).AddDays(-1)).AddDays(6);
 
         _range = await Menu.RangeAsync(from, to);
+
+        // Only scroll when the month on screen actually contains today.
+        _scrollPending = _range.Days.Any(d => IsToday(d.Date));
+
+        _markers = [];
+
+        if (await Shopping.NextTripAsync() is { } trip)
+        {
+            _markers.Add(new DayMarker(trip.Order.At, "order", $"{L["Shopping_Order"]} · {trip.Order.At:HH:mm}"));
+            _markers.Add(new DayMarker(trip.Delivery.At, "delivery", $"{L["Shopping_Delivery"]} · {trip.Delivery.At:HH:mm}"));
+        }
+
         _loading = false;
     }
 

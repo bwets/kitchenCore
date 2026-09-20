@@ -127,4 +127,13 @@
   <data name="Requests_Add" xml:space="preserve"><value>Ask</value></data>
   <data name="Requests_Placeholder" xml:space="preserve"><value>Something you would like…</value></data>
   <data name="Sync_Pending" xml:space="preserve"><value>Waiting to be synced.</value></data>
+  <data name="Close" xml:space="preserve"><value>Close</value></data>
+  <data name="Entry_NotesHint" xml:space="preserve"><value>Markdown is supported.</value></data>
+  <data name="Slots_All" xml:space="preserve"><value>All meals</value></data>
+  <data name="Slots_Fewer" xml:space="preserve"><value>Fewer meals</value></data>
+  <data name="Requests_Ask" xml:space="preserve"><value>Ask for a meal</value></data>
+  <data name="Requests_AskTitle" xml:space="preserve"><value>Ask for a meal</value></data>
+  <data name="Requests_AskIntro" xml:space="preserve"><value>It goes on the list for whoever plans the week.</value></data>
+  <data name="Requests_DragHint" xml:space="preserve"><value>Drag one onto a day to schedule it.</value></data>
+  <data name="Requests_Drop" xml:space="preserve"><value>Remove</value></data>
 </root>

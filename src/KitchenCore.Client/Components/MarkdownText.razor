@@ -1,0 +1,33 @@
+@using Markdig
+
+@* Notes rendered as Markdown.
+
+   Notes are where a recipe link, a list of what to buy or a "double it, the
+   freezer is empty" ends up, so plain text was always going to be limiting.
+   Rendered read-only: the editor is still a plain textarea, because what people
+   type is the source. *@
+
+@if (!string.IsNullOrWhiteSpace(Text))
+{
+    <div class="markdown">@((MarkupString)Render(Text))</div>
+}
+
+@code {
+    /// <summary>
+    /// Markdown for a note, not a document: no raw HTML, no tables, no headings
+    /// worth speaking of. UseAdvancedExtensions would add attributes and inline
+    /// HTML, which is exactly what should not be accepted from a file anyone in
+    /// the family can hand-edit.
+    /// </summary>
+    private static readonly MarkdownPipeline Pipeline = new MarkdownPipelineBuilder()
+        .UseAutoLinks()
+        .UseEmphasisExtras()
+        .UseSoftlineBreakAsHardlineBreak()
+        .DisableHtml()
+        .Build();
+
+    [Parameter]
+    public string? Text { get; set; }
+
+    private static string Render(string text) => Markdown.ToHtml(text, Pipeline);
+}

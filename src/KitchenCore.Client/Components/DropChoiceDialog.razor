@@ -1,4 +1,6 @@
 @inject MenuClient Menu
+@implements IAsyncDisposable
+@inject UiInterop Ui
 @inject IStringLocalizer<Strings> L
 
 @*
@@ -53,6 +55,20 @@
 }
 
 @code {
+    private DotNetObjectReference<DropChoiceDialog>? _self;
+
+    [JSInvokable]
+    public async Task HandleEscape() => await Cancel();
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_self is not null)
+        {
+            await Ui.UnregisterEscapeAsync(_self);
+            _self.Dispose();
+        }
+    }
+
     private ShiftPreview? _preview;
     private DropRequest? _lastRequest;
 
@@ -68,6 +84,16 @@
 
     protected override async Task OnParametersSetAsync()
     {
+        if (Request is not null)
+        {
+            _self ??= DotNetObjectReference.Create(this);
+            await Ui.RegisterEscapeAsync(_self);
+        }
+        else if (_self is not null)
+        {
+            await Ui.UnregisterEscapeAsync(_self);
+        }
+
         if (ReferenceEquals(Request, _lastRequest))
         {
             return;

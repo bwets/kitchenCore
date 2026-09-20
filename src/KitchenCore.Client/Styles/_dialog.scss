@@ -216,3 +216,180 @@
     height: 1.1rem;
   }
 }
+
+// A softer scrim for the request sidebar: it sits beside the calendar rather
+// than replacing it, and you need to see where you are dragging to.
+.dialog-scrim--soft {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.sidebar {
+  position: fixed;
+  z-index: 41;
+  top: var(--header-height);
+  right: 0;
+  bottom: 0;
+  width: min(18rem, 85vw);
+  padding: $space-4;
+  overflow-y: auto;
+  background: var(--surface-container-lowest);
+  border-left: 1px solid var(--outline-variant);
+  box-shadow: var(--shadow-2);
+
+  &__head {
+    display: flex;
+    align-items: center;
+    margin-bottom: $space-3;
+  }
+
+  &__title {
+    margin: 0;
+    font-size: 0.95rem;
+  }
+
+  &__close {
+    margin-left: auto;
+    min-height: 2rem;
+    width: 2rem;
+    padding: 0;
+    border: 0;
+    border-radius: $radius-full;
+    background: transparent;
+    color: var(--on-surface-variant);
+    font-size: 1.2rem;
+
+    &:hover { background: var(--surface-container); }
+  }
+
+  &__hint,
+  &__empty {
+    margin: 0 0 $space-3;
+    color: var(--on-surface-variant);
+    font-size: 0.78rem;
+    line-height: 1.4;
+  }
+
+  &__list {
+    margin: 0 0 $space-4;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    gap: $space-2;
+  }
+
+  &__item {
+    display: flex;
+    align-items: center;
+    gap: $space-2;
+    padding: $space-2;
+    border: 1px dashed var(--outline);
+    border-radius: $radius-sm;
+    background: var(--surface-container);
+    font-size: 0.85rem;
+    cursor: grab;
+  }
+
+  &__item-title { flex: 1 1 auto; min-width: 0; }
+
+  &__item-by {
+    color: var(--on-surface-variant);
+    font-size: 0.7rem;
+  }
+
+  &__drop {
+    flex: none;
+    min-height: 1.5rem;
+    width: 1.5rem;
+    padding: 0;
+    border: 0;
+    border-radius: $radius-full;
+    background: transparent;
+    color: var(--on-surface-variant);
+
+    &:hover { background: var(--error-container); color: var(--on-error-container); }
+  }
+
+  &__add {
+    display: grid;
+    gap: $space-2;
+  }
+}
+
+// Requests already asked for, listed under the ask dialog so nobody asks twice.
+.asked {
+  margin: $space-4 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: $space-1;
+  font-size: 0.8rem;
+  color: var(--on-surface-variant);
+
+  li {
+    display: flex;
+    gap: $space-2;
+    padding: $space-1 $space-2;
+    border-radius: $radius-xs;
+    background: var(--surface-container-low);
+  }
+
+  &__by { margin-left: auto; font-size: 0.7rem; }
+}
+
+// Rendered notes, and the read-only form of a field.
+.markdown {
+  font-size: 0.9rem;
+  line-height: 1.45;
+
+  > :first-child { margin-top: 0; }
+  > :last-child { margin-bottom: 0; }
+
+  p { margin: 0 0 $space-2; }
+
+  ul, ol {
+    margin: 0 0 $space-2;
+    padding-left: $space-5;
+  }
+
+  code {
+    padding: 1px 4px;
+    border-radius: $radius-xs;
+    background: var(--surface-container-high);
+    font-size: 0.85em;
+  }
+
+  a { color: var(--primary); }
+
+  blockquote {
+    margin: 0 0 $space-2;
+    padding-left: $space-3;
+    border-left: 2px solid var(--outline-variant);
+    color: var(--on-surface-variant);
+  }
+}
+
+// A value somebody may read but not change. A disabled input still looks like a
+// control that ought to work, which is a worse lie than plain text.
+.field__value {
+  padding: $space-2 $space-3;
+  border-radius: $radius-sm;
+  background: var(--surface-container-low);
+  color: var(--on-surface);
+  font-size: 0.95rem;
+  min-height: 2.75rem;
+
+  &:empty::before {
+    content: "—";
+    color: var(--outline);
+  }
+}
+
+.field__links {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: $space-1;
+
+  a { font-size: 0.85rem; word-break: break-all; }
+}

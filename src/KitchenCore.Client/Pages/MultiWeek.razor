@@ -25,6 +25,11 @@
     <span class="week-bar__range">@RangeLabel()</span>
     <span class="week-bar__spacer"></span>
 
+    <button type="button" class="week-bar__button @(_showAllSlots ? "is-on" : null)"
+            @onclick="() => _showAllSlots = !_showAllSlots">
+        @(_showAllSlots ? L["Slots_Fewer"] : L["Slots_All"])
+    </button>
+
     <label class="week-bar__weeks">
         @L["MultiWeek_Count"]
         <select class="field__input field__input--inline" @onchange="OnWeekCountChanged">
@@ -50,12 +55,11 @@
     @foreach (var band in Bands())
     {
         <section class="week-band">
-            <h2 class="week-band__label">@BandLabel(band)</h2>
-
             <div class="menu-grid-scroll">
                 <MenuGrid Days="@band"
                           Compact="true"
-                          Slots="@_slots"
+                          Label="@BandLabel(band)"
+                          Slots="@VisibleSlots(band)"
                           Markers="@_markers"
                           OnCreate="OnCreate"
                           OnEdit="@(e => _editing = e)"
@@ -80,7 +84,16 @@
 
 @code {
     private MenuRangeResponse? _range;
-    private IReadOnlyList<SlotDefinition> _slots = [];
+    private IReadOnlyList<SlotDefinition> _allSlots = [];
+    private bool _showAllSlots;
+
+    /// <summary>
+    /// Visibility is decided per band, not for the whole range: a week with a
+    /// snack in it shows the snack row, and the five quiet weeks around it do
+    /// not have to carry an empty one for its sake.
+    /// </summary>
+    private IReadOnlyList<SlotDefinition> VisibleSlots(List<MenuDay> band) =>
+        SlotVisibility.Visible(_allSlots, band, _showAllSlots);
     private List<DayMarker> _markers = [];
     private DateOnly _start;
     private int _weeks = 4;
@@ -99,7 +112,7 @@
         await Drag.AttachAsync();
 
         var status = await Status.GetAsync();
-        _slots = status.Slots;
+        _allSlots = status.Slots;
         _start = StartOfWeek(DateOnly.FromDateTime(DateTime.Now), status.WeekStart);
 
         await LoadAsync();
