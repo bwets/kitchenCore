@@ -69,6 +69,23 @@ clone shared with the family server, and those commits need attributing.
 Settings live in `config.yaml` under `%APPDATA%\bwets\KitchenCore` (or
 `~/.config/bwets/KitchenCore`).
 
+### Android
+
+The app is a window onto a KitchenCore server: it asks for the server's address
+and a name for the phone, then asks for access like any new device.
+
+**With [Obtainium](https://obtainium.imranr.dev)** (recommended — it installs
+updates as they are released):
+[add KitchenCore to Obtainium](https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/bwets/kitchenCore),
+or in Obtainium choose *Add app* and paste `https://github.com/bwets/kitchenCore`.
+
+**By hand:** download `KitchenCore-<version>-android.apk` from the latest
+[release](https://github.com/bwets/kitchenCore/releases) on the phone and open
+it, allowing installs from that source when asked.
+
+Every release is signed with the same key, so an update installs over the app
+and keeps its access. Android 7 or later.
+
 ## Access
 
 There are no accounts and no passwords. A device asks for access with a name, an
@@ -124,7 +141,7 @@ own launch profile. Adding one is a folder and a profile entry.
 ./scripts/dev.ps1 <scenario>        # stop any server, build, run
 ./scripts/reset-fixtures.ps1        # put fixtures/ back after a dev run
 ./scripts/init-git-fixture.ps1      # build the git scenario's repo and remote
-./scripts/make-icons.ps1            # regenerate the app icon
+./scripts/render-icons.ps1          # render every icon from resources/*.svg
 node scripts/import-notion.mjs <export> <out> <year>   # one-off Notion import
 ```
 

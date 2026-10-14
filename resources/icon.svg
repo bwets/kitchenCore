@@ -1,0 +1,17 @@
+<!--
+  The app icon: the header's brand mark (Components/BrandMark.razor) on its tile,
+  in the light theme's primary-container colours and the header's proportions
+  (a 32px tile, 12px corners, the 24-unit glyph drawn at 20px).
+
+  Source of every raster icon -- favicon, PWA, Windows, Android. Edit this and
+  run scripts/render-icons.ps1; never touch the PNGs by hand.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="192" fill="#bff0cf" />
+  <g transform="translate(96 96) scale(13.3333)" fill="none" stroke="#00210f"
+     stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M7 3v7a2 2 0 0 0 2 2h0a2 2 0 0 0 2-2V3" />
+    <path d="M9 12v9" />
+    <path d="M17 3c-1.7 1.2-2.5 3-2.5 5.2 0 1.6.8 2.6 2.5 2.8V21" />
+  </g>
+</svg>

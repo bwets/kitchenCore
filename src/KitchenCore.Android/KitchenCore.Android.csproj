@@ -1,0 +1,42 @@
+<!--
+  KitchenCore on Android: a WebView onto a KitchenCore server.
+
+  Deliberately not in KitchenCore.slnx. Building it needs the `android` workload
+  and an Android SDK, which nobody should have to install to work on the server
+  or run the tests; CI and the release build it on its own (see the workflows).
+
+    dotnet workload install android
+    dotnet build src/KitchenCore.Android -t:InstallAndroidDependencies -p:AcceptAndroidSDKLicenses=true
+    dotnet publish src/KitchenCore.Android -c Release
+
+  The root namespace is not KitchenCore.Android: inside a namespace of that name,
+  `Android.App` resolves to `KitchenCore.Android.App` and nothing compiles.
+-->
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0-android</TargetFramework>
+    <SupportedOSPlatformVersion>24</SupportedOSPlatformVersion>
+    <OutputType>Exe</OutputType>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>KitchenCore.Droid</RootNamespace>
+    <AssemblyName>KitchenCore</AssemblyName>
+
+    <ApplicationId>io.github.bwets.kitchencore</ApplicationId>
+    <!-- The release passes both: the build number as the code Android compares
+         for upgrades, and the release version as the name people see. -->
+    <ApplicationVersion>1</ApplicationVersion>
+    <ApplicationDisplayVersion>1.0.0</ApplicationDisplayVersion>
+
+    <!-- An .apk to sideload, not the Play Store's .aab. -->
+    <AndroidPackageFormat>apk</AndroidPackageFormat>
+    <AndroidPackageFormats>apk</AndroidPackageFormats>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- FileProvider, to hand the camera app somewhere to put the picture. -->
+    <PackageReference Include="Xamarin.AndroidX.Core" Version="1.19.0.1" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- The header's brand mark, tuned for a browser tab: the glyph fills more of
+       the tile and the stroke is heavier than resources/icon.svg, so it still
+       reads at 16px. Follows the browser's light or dark scheme. -->
+  <style>
+    rect { fill: #bff0cf; }
+    g { stroke: #00210f; }
+    @media (prefers-color-scheme: dark) {
+      rect { fill: #255338; }
+      g { stroke: #bff0cf; }
+    }
+  </style>
+  <rect width="32" height="32" rx="9" />
+  <g transform="translate(3.5 3.5) scale(1.0417)" fill="none"
+     stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M7 3v7a2 2 0 0 0 2 2h0a2 2 0 0 0 2-2V3" />
+    <path d="M9 12v9" />
+    <path d="M17 3c-1.7 1.2-2.5 3-2.5 5.2 0 1.6.8 2.6 2.5 2.8V21" />
+  </g>
+</svg>

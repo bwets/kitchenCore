@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <!-- The light theme's surface (Styles/themes/_light.scss), behind the bars
+       and the page while it loads. -->
+  <color name="surface">#F8FAF6</color>
+  <!-- The icon tile: primary-container, as in the page header. -->
+  <color name="ic_launcher_background">#BFF0CF</color>
+</resources>

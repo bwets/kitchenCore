@@ -172,6 +172,46 @@ Linux). Photino offers no native dialogs by design, so that prompt is an HTML
 page rendered in the same webview, talking back over `window.external.sendMessage`.
 The device name is passed to `/access?device=...` so the web app prefills it.
 
+## Android app
+
+`src/KitchenCore.Android` is a .NET Android WebView onto a KitchenCore server --
+the phone counterpart of the desktop's server mode, with no standalone mode.
+First run asks for the server address and a device name (an HTML page from
+`LocalPages`, answering through `kitchencore://` links the activity intercepts),
+checks `/healthz`, then opens `/access?device=...`: the normal device approval,
+with the token in the WebView's localStorage like any browser.
+
+It is **not in KitchenCore.slnx**: it needs the `android` workload and an SDK,
+which nobody should need to run the server or the tests. CI builds it in its own
+job and keeps the APK as an artifact; the release attaches a signed one. A stable
+signing key comes from the `ANDROID_KEYSTORE*` secrets -- without them each
+release is signed with a different debug key and will not install over the last.
+The key's only copy outside GitHub is in `~/.kitchencore/` on the maintainer's
+machine; GitHub secrets cannot be read back, so lose both and every phone has to
+uninstall (and re-request access) once.
+
+Obtainium installs it straight from the GitHub releases, which works because:
+one `.apk` per release, the tag `v1.0.N` matches the APK's version name `1.0.N`,
+releases are not marked prerelease, and the signature never changes. Keep all
+four true. The version code is the release run number, so it only grows.
+
+What a bare WebView does not do and `MainActivity` adds: `<input type=file>`
+(capture goes straight to the camera app through a FileProvider -- deliberately
+no CAMERA permission, which would then have to be granted first), back walking
+the page history (OnBackInvokedDispatcher; Android 16 no longer calls
+OnBackPressed), padding for the bars and keyboard under Android 15's enforced
+edge-to-edge, and other sites opening in the browser. The root namespace is
+`KitchenCore.Droid` because inside `KitchenCore.Android`, `Android.App` resolves
+to the wrong thing.
+
+## Icons
+
+One mark everywhere: the header's `BrandMark.razor`. `resources/icon.svg`,
+`resources/icon-maskable.svg` and `wwwroot/favicon.svg` carry it, and
+`scripts/render-icons.ps1` renders every PNG and the `.ico` from them (headless
+Chrome). Android's adaptive icon is a vector drawable of the same paths. Change
+the SVGs and re-run the script; the outputs are committed.
+
 ## URLs
 
 ```

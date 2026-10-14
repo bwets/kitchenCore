@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <!-- A light theme by day and a dark one by night (values-night). The WebView
+       answers the page's prefers-color-scheme from which one is active, so the
+       app's own Auto theme follows the phone. -->
+  <style name="AppTheme" parent="android:Theme.Material.Light.NoActionBar">
+    <item name="android:windowBackground">@color/surface</item>
+    <item name="android:statusBarColor">@color/surface</item>
+    <item name="android:navigationBarColor">@color/surface</item>
+    <item name="android:windowLightStatusBar">true</item>
+    <item name="android:windowLightNavigationBar">true</item>
+  </style>
+</resources>

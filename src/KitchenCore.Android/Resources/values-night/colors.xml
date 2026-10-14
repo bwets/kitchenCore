@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <!-- The dark theme's surface (Styles/themes/_dark.scss). -->
+  <color name="surface">#111411</color>
+</resources>

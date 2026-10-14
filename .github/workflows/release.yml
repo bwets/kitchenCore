@@ -160,20 +160,95 @@ jobs:
             KitchenCore-*-win-x64.msix
             KitchenCore-*.cer
 
+  # The Android app: an APK to sideload.
+  #
+  # Android installs an update only when it is signed with the same key as the
+  # installed app, so the key must be the same on every release. It comes from
+  # secrets:
+  #   ANDROID_KEYSTORE           the keystore, base64
+  #   ANDROID_KEYSTORE_PASSWORD  its password (also the key's)
+  #   ANDROID_KEY_ALIAS          the key's alias
+  # Without them the APK is signed with a throwaway debug key, and the next
+  # release will not install over it.
+  android:
+    needs: setup
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ needs.setup.outputs.version }}
+      ANDROID_KEYSTORE: ${{ secrets.ANDROID_KEYSTORE }}
+      ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: microsoft
+          java-version: '17'
+
+      - name: Android workload and SDK
+        run: |
+          dotnet workload install android
+          dotnet build src/KitchenCore.Android -t:InstallAndroidDependencies -f net10.0-android \
+            -p:AndroidSdkDirectory="$ANDROID_HOME" -p:AcceptAndroidSDKLicenses=true
+
+      - name: Build APK
+        run: |
+          signing=()
+          if [ -n "$ANDROID_KEYSTORE" ]; then
+            echo "$ANDROID_KEYSTORE" | base64 -d > "$RUNNER_TEMP/kitchencore.keystore"
+            signing=(
+              -p:AndroidKeyStore=true
+              -p:AndroidSigningKeyStore="$RUNNER_TEMP/kitchencore.keystore"
+              -p:AndroidSigningKeyAlias="$ANDROID_KEY_ALIAS"
+              -p:AndroidSigningStorePass=env:ANDROID_KEYSTORE_PASSWORD
+              -p:AndroidSigningKeyPass=env:ANDROID_KEYSTORE_PASSWORD
+            )
+          else
+            echo "::warning::No ANDROID_KEYSTORE secret: signed with a debug key, so the next release will not install over this one."
+          fi
+
+          # The version code is what Android compares for an upgrade; the run
+          # number only ever grows, even when the version name is overridden.
+          dotnet publish src/KitchenCore.Android -c Release -p:AndroidSdkDirectory="$ANDROID_HOME" \
+            -p:ApplicationDisplayVersion="$VERSION" -p:ApplicationVersion=${{ github.run_number }} \
+            "${signing[@]}" -o publish/android
+
+          mv publish/android/*-Signed.apk "KitchenCore-$VERSION-android.apk"
+          rm -f "$RUNNER_TEMP/kitchencore.keystore"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android
+          path: KitchenCore-*-android.apk
+
   release:
-    needs: [setup, docker, windows]
+    needs: [setup, docker, windows, android]
     runs-on: ubuntu-latest
     env:
       VERSION: ${{ needs.setup.outputs.version }}
     steps:
+      # By name: build-push-action also uploads a build record (*.dockerbuild)
+      # that download-artifact cannot fetch, and asking for everything failed
+      # the release on it twice.
       - uses: actions/download-artifact@v4
         with:
-          path: dist
+          name: windows
+          path: dist/windows
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: android
+          path: dist/android
 
       - name: Generate checksums
         run: |
           cd dist
-          find . -type f \( -name '*.zip' -o -name '*.msix' \) -print0 \
+          find . -type f \( -name '*.zip' -o -name '*.msix' -o -name '*.apk' \) -print0 \
             | xargs -0 sha256sum > ../SHA256SUMS
           cat ../SHA256SUMS
 
@@ -202,8 +277,15 @@ jobs:
 
             The desktop app can run standalone, with the menu in a folder on that
             machine and no server at all.
+
+            ## Android
+
+            - `KitchenCore-${{ env.VERSION }}-android.apk` — open it on the phone
+              to install, allowing installs from that source when asked. It asks
+              for the server's address, then for access like any new device.
           files: |
             dist/**/*.zip
             dist/**/*.msix
+            dist/**/*.apk
             dist/**/*.cer
             SHA256SUMS

@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+  <uses-permission android:name="android.permission.INTERNET" />
+
+  <!-- No CAMERA permission, on purpose: the camera app takes the picture. An app
+       that declares CAMERA must hold it before it may even ask another app to. -->
+
+  <!-- Cleartext is allowed: a family server is usually http:// on the home
+       network, not something with a certificate. -->
+  <application
+      android:label="KitchenCore"
+      android:icon="@mipmap/ic_launcher"
+      android:roundIcon="@mipmap/ic_launcher"
+      android:theme="@style/AppTheme"
+      android:supportsRtl="true"
+      android:usesCleartextTraffic="true">
+
+    <!-- Where camera snaps are written before the page uploads them. The
+         authority is the package name plus ".photos"; MainActivity builds the
+         same string. -->
+    <provider
+        android:name="androidx.core.content.FileProvider"
+        android:authorities="io.github.bwets.kitchencore.photos"
+        android:exported="false"
+        android:grantUriPermissions="true">
+      <meta-data
+          android:name="android.support.FILE_PROVIDER_PATHS"
+          android:resource="@xml/photo_paths" />
+    </provider>
+
+  </application>
+</manifest>

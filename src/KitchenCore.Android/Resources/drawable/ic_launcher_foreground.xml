@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The header's brand mark (Components/BrandMark.razor), path for path.
+     An adaptive icon is 108dp, of which the launcher shows about the middle 72;
+     the 24-unit glyph is drawn at 45dp, the same share of the tile as in the
+     header (20px of 32). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+  <group
+      android:translateX="31.5"
+      android:translateY="31.5"
+      android:scaleX="1.875"
+      android:scaleY="1.875">
+    <path
+        android:pathData="M7 3v7a2 2 0 0 0 2 2h0a2 2 0 0 0 2-2V3"
+        android:strokeColor="#00210F"
+        android:strokeWidth="1.8"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M9 12v9"
+        android:strokeColor="#00210F"
+        android:strokeWidth="1.8"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M17 3c-1.7 1.2-2.5 3-2.5 5.2 0 1.6.8 2.6 2.5 2.8V21"
+        android:strokeColor="#00210F"
+        android:strokeWidth="1.8"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+  </group>
+</vector>

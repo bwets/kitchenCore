@@ -40,6 +40,7 @@ internal static class Program
 
         var window = new PhotinoWindow()
             .SetTitle("KitchenCore")
+            .SetIconFile(Path.Combine(AppContext.BaseDirectory, OperatingSystem.IsWindows() ? "icon.ico" : "icon.png"))
             .SetUseOsDefaultSize(false)
             .SetSize(config.Width, config.Height)
             .SetUseOsDefaultLocation(true)

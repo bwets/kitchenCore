@@ -29,6 +29,12 @@
     <ApplicationIcon>$(MSBuildProjectDirectory)/../../resources/icon.ico</ApplicationIcon>
   </PropertyGroup>
 
+  <!-- The window's own icon: Photino does not take it from the exe. -->
+  <ItemGroup>
+    <None Include="../../resources/icon.ico" Link="icon.ico" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="../../resources/icon_512.png" Link="icon.png" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="PhotinoX" Version="5.2.2" />
     <PackageReference Include="YamlDotNet" Version="18.1.0" />

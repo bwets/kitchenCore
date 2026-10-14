@@ -80,3 +80,39 @@ jobs:
           echo "the app is being served"
 
           docker rm -f kc
+
+  android:
+    # The Android app is outside the solution (it needs the android workload),
+    # so the build job above never sees it. Built here on every change, and the
+    # APK kept for a fortnight so a branch can be tried on a phone before release.
+    # Signed with a throwaway debug key: install it over a release build and
+    # Android refuses, so uninstall that first.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: microsoft
+          java-version: '17'
+
+      - name: Android workload and SDK
+        run: |
+          dotnet workload install android
+          dotnet build src/KitchenCore.Android -t:InstallAndroidDependencies -f net10.0-android \
+            -p:AndroidSdkDirectory="$ANDROID_HOME" -p:AcceptAndroidSDKLicenses=true
+
+      - name: Build APK
+        run: |
+          dotnet publish src/KitchenCore.Android -c Release -p:AndroidSdkDirectory="$ANDROID_HOME" -o publish/android
+          mv publish/android/*-Signed.apk KitchenCore-ci-android.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-apk
+          path: KitchenCore-ci-android.apk
+          retention-days: 14
