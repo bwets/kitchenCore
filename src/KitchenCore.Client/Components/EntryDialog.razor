@@ -162,7 +162,14 @@
     /// <summary>True when editing something that already exists, rather than creating.</summary>
     private bool IsExisting => Target is { Entry.Title.Length: > 0 };
 
-    private bool CanEdit => Auth.Identity.CanEdit(Section.Menu);
+    /// <summary>
+    /// The view is in reading mode, so even an editor gets the entry shown
+    /// rather than an editor for it. Switching to edit mode is one tap away.
+    /// </summary>
+    [Parameter]
+    public bool ReadOnly { get; set; }
+
+    private bool CanEdit => !ReadOnly && Auth.Identity.CanEdit(Section.Menu);
 
     protected override async Task OnParametersSetAsync()
     {

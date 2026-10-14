@@ -136,4 +136,31 @@ public class RequestStoreTests
 
         Assert.Equal(before, scenario.ReadMenuFile("2026.yaml"));
     }
+
+    [Fact]
+    public async Task A_request_whose_scheduling_failed_goes_back_where_it_was()
+    {
+        using var scenario = FixtureScenario.Open("empty");
+
+        await scenario.Requests.AddAsync("Lasagnes", null, "Emma");
+        await scenario.Requests.AddAsync("Couscous", null, "Papa");
+
+        var taken = await scenario.Requests.TakeAsync(0, "Lasagnes");
+        await scenario.Requests.RestoreAsync(0, taken!);
+
+        Assert.Equal(["Lasagnes", "Couscous"], scenario.Requests.List().Select(r => r.Title));
+    }
+
+    [Fact]
+    public async Task The_date_a_request_was_made_survives_the_file()
+    {
+        using var scenario = FixtureScenario.Open("empty");
+
+        await scenario.Requests.AddAsync("Lasagnes", null, "Emma");
+
+        // YamlDotNet on its own writes a DateOnly as a six-field object and reads
+        // it back as 0001-01-01.
+        Assert.Equal(DateOnly.FromDateTime(DateTime.Now), scenario.Requests.List()[0].CreatedAt);
+        Assert.Contains($"createdAt: {DateTime.Now:yyyy-MM-dd}", File.ReadAllText(Path.Combine(scenario.MenuRoot, "requests.yaml")));
+    }
 }

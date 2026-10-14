@@ -36,11 +36,13 @@ public sealed class RequestStore(KitchenPaths paths)
 {
     private static readonly IDeserializer Deserializer = new DeserializerBuilder()
         .WithNamingConvention(CamelCaseNamingConvention.Instance)
+        .WithTypeConverter(YamlDateOnlyConverter.Instance)
         .IgnoreUnmatchedProperties()
         .Build();
 
     private static readonly ISerializer Serializer = new SerializerBuilder()
         .WithNamingConvention(CamelCaseNamingConvention.Instance)
+        .WithTypeConverter(YamlDateOnlyConverter.Instance)
         .ConfigureDefaultValuesHandling(DefaultValuesHandling.OmitNull)
         .WithIndentedSequences()
         .Build();
@@ -99,6 +101,14 @@ public sealed class RequestStore(KitchenPaths paths)
 
         return taken;
     }
+
+    /// <summary>
+    /// Puts a taken request back where it was, when scheduling it failed after
+    /// it had already been taken off the list. Losing someone's request because a
+    /// write to the menu failed would be a strange way to say no.
+    /// </summary>
+    public Task RestoreAsync(int ordinal, RequestRecord record, CancellationToken cancellationToken = default) =>
+        MutateAsync(file => file.Requests.Insert(Math.Clamp(ordinal, 0, file.Requests.Count), record), cancellationToken);
 
     private RequestFile Load()
     {

@@ -104,7 +104,12 @@
 
         if (Request is not null)
         {
-            _preview = await Menu.PreviewMoveAsync(Request.From, Request.To);
+            _preview = Request switch
+            {
+                { Request: { } request } => await Menu.PreviewScheduleAsync(request, Request.To),
+                { From: { } from } => await Menu.PreviewMoveAsync(from, Request.To),
+                _ => null,
+            };
         }
     }
 
@@ -114,5 +119,5 @@
 
     private string Description() => Request is null
         ? string.Empty
-        : string.Format(L["Drop_Description"], Request.From.Entry.Title, Request.To.Date.ToString("dddd d MMMM"));
+        : string.Format(L["Drop_Description"], Request.Title, Request.To.Date.ToString("dddd d MMMM"));
 }

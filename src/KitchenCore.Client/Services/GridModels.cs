@@ -12,8 +12,16 @@ public sealed record MenuEntryRef(DateOnly Date, string Slot, int Index, MenuEnt
 /// </summary>
 public sealed record DayMarker(DateTime At, string Kind, string Label);
 
-/// <summary>A drop waiting on the user's answer, because the target is occupied.</summary>
-public sealed record DropRequest(MenuEntryRef From, DropTarget To, bool Copy);
+/// <summary>
+/// A drop waiting on the user's answer, because the target is occupied. Either a
+/// meal being moved (<see cref="From"/>) or an undated request being scheduled
+/// (<see cref="Request"/>) -- both get the same question.
+/// </summary>
+public sealed record DropRequest(MenuEntryRef? From, DropTarget To, bool Copy, MenuRequest? Request = null)
+{
+    public string Title => From?.Entry.Title ?? Request?.Title ?? string.Empty;
+}
+
 
 /// <summary>
 /// How the request panel is showing. A requestor only ever adds one, so they get

@@ -1,10 +1,5 @@
 @page "/menu/multi-week"
-@implements IAsyncDisposable
-@inject DragController Drag
-@inject MenuClient Menu
-@inject SystemStatusService Status
-@inject IShoppingSchedule Shopping
-@inject IStringLocalizer<Strings> L
+@inherits MenuViewBase
 
 @*
     Several weeks at once, for moving meals around.
@@ -12,7 +7,8 @@
     Reuses MenuGrid one week band at a time rather than rendering one long grid:
     the slot rows have to stay aligned *within* a week, but a band per week keeps
     the day-of-week columns lined up down the page, which is what makes dragging
-    "the same dinner, a week later" straightforward.
+    "the same dinner, a week later" straightforward. It is also the natural
+    place to schedule requests, so the request sidebar is here as well.
 *@
 
 <PageTitle>@L["MultiWeek_Title"] · @L["AppName"]</PageTitle>
@@ -25,9 +21,9 @@
     <span class="week-bar__range">@RangeLabel()</span>
     <span class="week-bar__spacer"></span>
 
-    <button type="button" class="week-bar__button @(_showAllSlots ? "is-on" : null)"
-            @onclick="() => _showAllSlots = !_showAllSlots">
-        @(_showAllSlots ? L["Slots_Fewer"] : L["Slots_All"])
+    <button type="button" class="week-bar__button @(ShowAllSlots ? "is-on" : null)"
+            @onclick="() => ShowAllSlots = !ShowAllSlots">
+        @(ShowAllSlots ? L["Slots_Fewer"] : L["Slots_All"])
     </button>
 
     <label class="week-bar__weeks">
@@ -40,18 +36,23 @@
         </select>
     </label>
 
-    @if (_loading)
-    {
-        <span class="loading">@L["Loading"]</span>
-    }
+    <MenuTools Loading="Loading"
+               OnRefresh="RefreshAsync"
+               CanEdit="CanEdit"
+               CanRequest="CanRequest"
+               Editing="Editable"
+               OnToggleEdit="ToggleEditMode"
+               RequestCount="RequestCount"
+               PanelOpen="@(Panel == RequestPanelMode.Place)"
+               OnRequests="OpenRequests" />
 </div>
 
-@if (_loadError is { Length: > 0 })
+@if (LoadError is { Length: > 0 })
 {
-    <div class="issues">@_loadError</div>
+    <div class="issues">@LoadError</div>
 }
 
-@if (_conflict)
+@if (Conflict)
 {
     <div class="issues">@L["Conflict"]</div>
 }
@@ -65,32 +66,38 @@
                           Compact="true"
                           Label="@BandLabel(band)"
                           Slots="@VisibleSlots(band)"
-                          Markers="@_markers"
+                          Markers="@Markers"
+                          Editable="Editable"
                           OnCreate="OnCreate"
-                          OnEdit="@(e => _editing = e)"
-                                      OnMoveMenu="@(e => _moving = e)" />
+                          OnEdit="OnEdit"
+                          OnMoveMenu="OnMoveMenu" />
             </div>
         </section>
     }
 </div>
 
-<EntryDialog Target="@_editing"
-             Version="@_range?.Version"
+<EntryDialog Target="@Editing"
+             ReadOnly="@(!Editable)"
+             Version="@Range?.Version"
              OnSaved="OnSavedAsync"
-             OnCancelled="@(() => _editing = null)" />
+             OnCancelled="@(() => Editing = null)" />
 
-<DropChoiceDialog Request="@_pendingDrop"
+<DropChoiceDialog Request="@PendingDrop"
                   OnChosen="OnDropChoiceAsync"
-                  OnCancelled="@(() => _pendingDrop = null)" />
+                  OnCancelled="@(() => PendingDrop = null)" />
 
-<MoveToDialog Entry="@_moving"
+<MoveToDialog Entry="@Moving"
               OnConfirmed="OnMoveConfirmedAsync"
-              OnCancelled="@(() => _moving = null)" />
+              OnCancelled="@(() => Moving = null)" />
+
+<RequestPanel Mode="@Panel"
+              Requests="@(Range?.Requests ?? [])"
+              OnChanged="RefreshAsync"
+              OnClosed="@(() => Panel = RequestPanelMode.Closed)" />
 
 @code {
-    private MenuRangeResponse? _range;
-    private IReadOnlyList<SlotDefinition> _allSlots = [];
-    private bool _showAllSlots;
+    private DateOnly _start;
+    private int _weeks = 4;
 
     /// <summary>
     /// Visibility is decided per band, not for the whole range: a week with a
@@ -98,66 +105,16 @@
     /// not have to carry an empty one for its sake.
     /// </summary>
     private IReadOnlyList<SlotDefinition> VisibleSlots(List<MenuDay> band) =>
-        SlotVisibility.Visible(_allSlots, band, _showAllSlots);
-    private List<DayMarker> _markers = [];
-    private DateOnly _start;
-    private int _weeks = 4;
-    private bool _loading = true;
-    private bool _conflict;
-    private string? _loadError;
-    private MenuEntryRef? _editing;
-    private MenuEntryRef? _moving;
-    private DropRequest? _pendingDrop;
+        SlotVisibility.Visible(AllSlots, band, ShowAllSlots);
 
-    protected override async Task OnInitializedAsync()
-    {
-        // One drag listener for the page; drops resolve against whatever is
-        // currently loaded rather than anything carried through JavaScript.
-        Drag.Resolve = ResolveEntry;
-        Drag.Dropped += OnDroppedAsync;
-        await Drag.AttachAsync();
+    protected override (DateOnly From, DateOnly To) CurrentSpan() => (_start, _start.AddDays(_weeks * 7 - 1));
 
-        var status = await Status.GetAsync();
-        _allSlots = status.Slots;
-        _start = StartOfWeek(DateOnly.FromDateTime(DateTime.Now), status.WeekStart);
-
-        await LoadAsync();
-    }
-
-    private async Task LoadAsync()
-    {
-        _loading = true;
-        _conflict = false;
-        _loadError = null;
-
-        try
-        {
-            _range = await Menu.RangeAsync(_start, _start.AddDays(_weeks * 7 - 1));
-        }
-        catch (ApiException ex)
-        {
-            // An empty week and an unreachable server look identical otherwise.
-            _loadError = L[ex.ResourceKey];
-            _range = null;
-            _loading = false;
-            return;
-        }
-
-
-        _markers = [];
-        if (await Shopping.NextTripAsync() is { } trip)
-        {
-            _markers.Add(new DayMarker(trip.Order.At, "order", L["Shopping_Order"]));
-            _markers.Add(new DayMarker(trip.Delivery.At, "delivery", L["Shopping_Delivery"]));
-        }
-
-        _loading = false;
-    }
+    protected override void InitialiseStart() => _start = StartOfWeek(Today);
 
     /// <summary>Splits the loaded range into one list of days per week.</summary>
     private IEnumerable<List<MenuDay>> Bands()
     {
-        var days = _range?.Days ?? [];
+        var days = Range?.Days ?? [];
 
         for (var offset = 0; offset + 7 <= days.Count; offset += 7)
         {
@@ -182,95 +139,9 @@
 
     private async Task GoToTodayAsync()
     {
-        _start = StartOfWeek(DateOnly.FromDateTime(DateTime.Now), (await Status.GetAsync()).WeekStart);
+        _start = StartOfWeek(Today);
         await LoadAsync();
     }
-
-    private void OnCreate((DateOnly Date, string Slot) target) =>
-        _editing = new MenuEntryRef(target.Date, target.Slot, 0, new MenuEntry { Title = string.Empty });
-
-    private async Task OnDroppedAsync(MenuEntryRef from, DropTarget to, bool copy)
-    {
-        // A free slot never asks. An occupied one always does.
-        if (IsOccupied(to))
-        {
-            _pendingDrop = new DropRequest(from, to, copy);
-            StateHasChanged();
-            return;
-        }
-
-        await ApplyMoveAsync(from, to, copy, mode: null);
-        StateHasChanged();
-    }
-
-    /// <summary>Finds the entry a drop refers to in the data now on screen.</summary>
-    private MenuEntryRef? ResolveEntry(DateOnly date, string slot, int index)
-    {
-        var cell = _range?.Days
-            .FirstOrDefault(d => d.Date == date)?
-            .Cells.FirstOrDefault(c => string.Equals(c.Slot, slot, StringComparison.OrdinalIgnoreCase));
-
-        return cell is not null && index >= 0 && index < cell.Entries.Count
-            ? new MenuEntryRef(date, slot, index, cell.Entries[index])
-            : null;
-    }
-
-    public async ValueTask DisposeAsync()
-    {
-        Drag.Dropped -= OnDroppedAsync;
-        await ValueTask.CompletedTask;
-    }
-
-    private async Task OnDropChoiceAsync(DropMode mode)
-    {
-        if (_pendingDrop is { } pending)
-        {
-            _pendingDrop = null;
-            await ApplyMoveAsync(pending.From, pending.To, pending.Copy, mode);
-        }
-    }
-
-    private async Task OnMoveConfirmedAsync((DropTarget To, bool Copy) move)
-    {
-        if (_moving is not { } entry)
-        {
-            return;
-        }
-
-        _moving = null;
-
-        if (IsOccupied(move.To))
-        {
-            _pendingDrop = new DropRequest(entry, move.To, move.Copy);
-            return;
-        }
-
-        await ApplyMoveAsync(entry, move.To, move.Copy, mode: null);
-    }
-
-    private async Task ApplyMoveAsync(MenuEntryRef from, DropTarget to, bool copy, DropMode? mode)
-    {
-        var result = await Menu.MoveAsync(from, to, copy, mode, _range?.Version);
-
-        if (result.Conflict)
-        {
-            _conflict = true;
-        }
-
-        await LoadAsync();
-    }
-
-    private async Task OnSavedAsync()
-    {
-        _editing = null;
-        await LoadAsync();
-    }
-
-    private bool IsOccupied(DropTarget target) =>
-        _range?.Days
-            .FirstOrDefault(d => d.Date == target.Date)?
-            .Cells.FirstOrDefault(c => string.Equals(c.Slot, target.Slot, StringComparison.OrdinalIgnoreCase))
-            is { IsEmpty: false };
 
     private string RangeLabel()
     {
@@ -280,10 +151,4 @@
 
     private static string BandLabel(List<MenuDay> band) =>
         band.Count == 0 ? string.Empty : $"{band[0].Date:d MMM} – {band[^1].Date:d MMM}";
-
-    private static DateOnly StartOfWeek(DateOnly date, DayOfWeek weekStart)
-    {
-        var offset = ((int)date.DayOfWeek - (int)weekStart + 7) % 7;
-        return date.AddDays(-offset);
-    }
 }

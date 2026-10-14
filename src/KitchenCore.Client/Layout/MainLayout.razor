@@ -74,7 +74,7 @@
     </div>
 </header>
 
-@if (Auth.Identity.Approved && Current is { Views.Count: > 0 } current)
+@if (Auth.Identity.Approved && Current is { Views.Count: > 1 } current)
 {
     <nav class="app-views" aria-label="@L["Nav_Views"]">
         @foreach (var view in current.Views)

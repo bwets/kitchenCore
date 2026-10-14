@@ -40,11 +40,13 @@ public sealed class DeviceStore(KitchenPaths paths, AppConfigLoader config)
 {
     private static readonly IDeserializer Deserializer = new DeserializerBuilder()
         .WithNamingConvention(CamelCaseNamingConvention.Instance)
+        .WithTypeConverter(YamlDateOnlyConverter.Instance)
         .IgnoreUnmatchedProperties()
         .Build();
 
     private static readonly ISerializer Serializer = new SerializerBuilder()
         .WithNamingConvention(CamelCaseNamingConvention.Instance)
+        .WithTypeConverter(YamlDateOnlyConverter.Instance)
         .ConfigureDefaultValuesHandling(DefaultValuesHandling.OmitNull)
         .Build();
 

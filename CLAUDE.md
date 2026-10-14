@@ -41,6 +41,35 @@ hand-editing the file would produce:
 Undated "any day" requests live in `data/menu/requests.yaml` as a plain
 sequence, addressed by ordinal and guarded by title.
 
+Shopping is one session per week, keyed by the week's first day, one file per
+year (`data/shopping/2026.yaml`). Items are addressed like requests: ordinal
+plus title guard.
+
+```yaml
+year: 2026
+weeks:
+  2026-10-12:
+    order: 2026-10-13 20:00      # both optional: a week without dates takes the
+    delivery: 2026-10-15 15:00   # nearest earlier edited week's, shifted by whole
+    placed: true                 # weeks, else config `shopping:` (Tue 20:00/Thu 15:00)
+    items:
+      - title: Lait
+        by: Emma                 # requestors may remove only their own
+        status: bought           # or notFound / refused; absent = still to get.
+                                 # Placing the order makes open items bought.
+        photo: 2026-10-12/3f2a….jpg   # under data/shopping/photos/, one folder per
+                                      # week; reused items share the file
+```
+
+Photos are served by `/api/shopping/photos/...` behind the device header, so the
+page loads them through `js/photos.js` (fetch + blob URL), not `<img src>`. The
+type is sniffed from the bytes on upload, never taken from the request. A file
+is deleted only when no item in any year still points at it.
+
+Shopping titles compare loosely (`ShoppingTitles.Key`: case, accents, spacing,
+a plural s/x): adding something already on the list reopens it instead of
+adding a second line, and suggestions list each thing once.
+
 ## Running it
 
 ```
@@ -81,7 +110,11 @@ These are settled; don't relitigate them without a reason.
 - **Slots are config, not data.** `config/app.yaml` defines them; the family can
   add "brunch" without touching a year file.
 - **Drop on an occupied slot always asks**: insert / shift-right / overwrite.
-  There is no silent overwrite and no swap.
+  There is no silent overwrite and no swap. Scheduling a request asks too.
+  Ctrl/Cmd while dragging copies instead of moving.
+- **Menu views open in reading mode**, even for editors; edit mode (`EditMode`,
+  in-memory, shared across the menu views) turns on add targets, dragging and
+  the editor. The three views share their plumbing through `MenuViewBase`.
 - **Slots are aligned rows.** The week is ONE CSS grid (days = columns, slots =
   rows), not seven per-day stacks -- those misalign the moment a day skips a slot
   or holds two. Every day renders every slot; empty cells are the "add here" target.

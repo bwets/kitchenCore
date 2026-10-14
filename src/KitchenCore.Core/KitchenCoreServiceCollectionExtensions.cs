@@ -35,6 +35,8 @@ public static class KitchenCoreServiceCollectionExtensions
         services.AddHostedService(sp => sp.GetRequiredService<GitSyncService>());
         services.AddSingleton<RequestStore>();
         services.AddSingleton<MenuStore>();
+        services.AddSingleton<Shopping.ShoppingStore>();
+        services.AddSingleton<Shopping.ShoppingPhotos>();
         services.AddSingleton<DeviceStore>();
 
         return services;

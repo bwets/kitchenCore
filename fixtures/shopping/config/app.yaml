@@ -1,0 +1,41 @@
+# KitchenCore application config.
+# This folder is NOT synced to git -- it holds the token and the device list.
+
+locale:
+  default: fr
+  available: [fr, en]
+
+weekStart: monday
+
+# Meal slots live here rather than in the data files, so adding or relabelling
+# one never means touching a year file. `order` drives the grid rows in the week view.
+slots:
+  - key: lunch
+    order: 10
+    labels: { fr: Déjeuner, en: Lunch }
+  - key: gouter
+    order: 20
+    labels: { fr: Goûter, en: Snack }
+  - key: dinner
+    order: 30
+    labels: { fr: Dîner, en: Dinner }
+  - key: special
+    order: 40
+    labels: { fr: Spécial, en: Special }
+
+git:
+  # No `enabled`, no remote, no branch: git is on precisely when the data folder
+  # is itself a repository, and the remote and branch are read from that repository.
+  # Prefer the KITCHENCORE_GIT__TOKEN environment variable over writing the token here.
+  token: ""
+  committerName: KitchenCore
+  committerEmail: kitchencore@local
+
+adminBootstrapCode: "change-me"
+
+# The usual shopping rhythm. A week whose dates are edited overrides this, and
+# the weeks after it follow that week until one of them is edited in turn.
+shopping:
+  order: { day: tuesday, time: "20:00" }
+  delivery: { day: thursday, time: "15:00" }
+  channel: Drive

@@ -81,3 +81,44 @@ export function scrollDayIntoView(date) {
         behavior: 'instant',
     });
 }
+
+// Keeps a view current while it sits open on the kitchen tablet. Polls on a
+// timer and again the moment the tab comes back into view, which is when stale
+// data is most likely and most noticed. A tick is skipped while the page is
+// hidden (nobody is looking) and mid-drag (a re-render under the pointer would
+// pull the drop target away).
+const refreshers = new Map();
+
+// Keyed by an id from .NET: the same object reference is not guaranteed to
+// arrive as the same JS object on two different calls.
+export function startAutoRefresh(id, dotnetRef, intervalMs) {
+    stopAutoRefresh(id);
+
+    const tick = () => {
+        if (document.hidden || document.body.classList.contains('is-dragging')) {
+            return;
+        }
+
+        dotnetRef.invokeMethodAsync('HandleAutoRefresh').catch(() => { });
+    };
+
+    const onVisibility = () => {
+        if (!document.hidden) {
+            tick();
+        }
+    };
+
+    const timer = setInterval(tick, intervalMs);
+    document.addEventListener('visibilitychange', onVisibility);
+    refreshers.set(id, { timer, onVisibility });
+}
+
+export function stopAutoRefresh(id) {
+    const existing = refreshers.get(id);
+
+    if (existing) {
+        clearInterval(existing.timer);
+        document.removeEventListener('visibilitychange', existing.onVisibility);
+        refreshers.delete(id);
+    }
+}

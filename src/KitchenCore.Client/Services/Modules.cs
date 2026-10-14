@@ -45,15 +45,14 @@ public static class AppModules
         ]);
 
     /// <summary>
-    /// Part 2. Listed from the start, and visibly not ready, because a tab that
-    /// appears later moves everything else -- and because the shape of the app
-    /// is easier to understand when the empty room is on the plan.
+    /// Part 2. One view for now -- the session list -- so it gets no row of view
+    /// tabs: a single tab under a tab says nothing.
     /// </summary>
     public static AppModule Shopping { get; } = new(
         Section.Shopping,
         "shopping",
         "Nav_Shopping",
-        []);
+        [new ModuleView("shopping", "Nav_ShoppingList")]);
 
     /// <summary>
     /// Managing the app rather than the food.

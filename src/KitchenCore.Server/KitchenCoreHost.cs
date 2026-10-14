@@ -43,6 +43,7 @@ public static class KitchenCoreHost
         builder.Services.AddKitchenCore();
         builder.Services.AddHttpContextAccessor();
         builder.Services.AddScoped<Auth.DeviceContext>();
+        builder.Services.AddSingleton(TimeProvider.System);
 
         configure?.Invoke(builder);
 
@@ -68,6 +69,7 @@ public static class KitchenCoreHost
         app.MapGet("/healthz", () => Results.Ok(new { status = "ok" }));
         app.MapSystemEndpoints();
         app.MapMenuEndpoints();
+        app.MapShoppingEndpoints();
         app.MapAuthEndpoints();
 
         // Anything that is not an API route or a file is a client-side route.

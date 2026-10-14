@@ -1,0 +1,54 @@
+@implements IAsyncDisposable
+@inject IJSRuntime JS
+
+@*
+    A shopping item's picture. Loaded by js/photos.js rather than by src, since
+    the request needs the device header an <img> cannot send.
+*@
+
+<img @ref="_img" class="@Class" alt="@Alt" decoding="async" />
+
+@code {
+    private ElementReference _img;
+    private IJSObjectReference? _module;
+    private string? _shown;
+
+    /// <summary>The photo path as stored on the item.</summary>
+    [Parameter, EditorRequired]
+    public string Path { get; set; } = string.Empty;
+
+    [Parameter]
+    public string? Class { get; set; }
+
+    [Parameter]
+    public string? Alt { get; set; }
+
+    public static string UrlFor(string path) => $"api/shopping/photos/{path}";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_shown == Path)
+        {
+            return;
+        }
+
+        _shown = Path;
+        _module ??= await JS.InvokeAsync<IJSObjectReference>("import", "./js/photos.js");
+        await _module.InvokeVoidAsync("show", _img, UrlFor(Path));
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_module is not null)
+        {
+            try
+            {
+                await _module.DisposeAsync();
+            }
+            catch (JSDisconnectedException)
+            {
+                // The page is going away.
+            }
+        }
+    }
+}

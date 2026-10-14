@@ -71,12 +71,16 @@
                     <p class="card__subtitle">@channel</p>
                 }
             </div>
-            <span class="badge badge--soft">@L["Placeholder"]</span>
+            <a class="card__action" href="shopping">@L["Home_OpenShopping"]</a>
         </header>
 
-        @if (_trip is null)
+        @if (!_tripLoaded)
         {
             <p class="loading">@L["Loading"]</p>
+        }
+        else if (_trip is null)
+        {
+            <p class="muted">@L["Error_Unreachable"]</p>
         }
         else
         {
@@ -85,20 +89,14 @@
                     <span class="moment__rule" aria-hidden="true"></span>
                     <span class="moment__label">@L["Shopping_Order"]</span>
                     <span class="moment__when">@Format(_trip.Order)</span>
-                    @if (_trip.Order.IsPredicted)
-                    {
-                        <span class="badge badge--soft">@L["Shopping_Predicted"]</span>
-                    }
+                    <span class="badge badge--soft">@(_trip.Order.IsPredicted ? L["Shopping_Predicted"] : L["Shopping_Confirmed"])</span>
                 </li>
 
                 <li class="moment moment--delivery">
                     <span class="moment__rule" aria-hidden="true"></span>
                     <span class="moment__label">@L["Shopping_Delivery"]</span>
                     <span class="moment__when">@Format(_trip.Delivery)</span>
-                    @if (_trip.Delivery.IsPredicted)
-                    {
-                        <span class="badge badge--soft">@L["Shopping_Predicted"]</span>
-                    }
+                    <span class="badge badge--soft">@(_trip.Delivery.IsPredicted ? L["Shopping_Predicted"] : L["Shopping_Confirmed"])</span>
                 </li>
             </ul>
 
@@ -111,6 +109,7 @@
 @code {
     private MenuRangeResponse? _today;
     private ShoppingTrip? _trip;
+    private bool _tripLoaded;
     private IReadOnlyList<SlotDefinition> _slots = [];
 
     private static DateOnly Today => DateOnly.FromDateTime(DateTime.Now);
@@ -122,6 +121,7 @@
     {
         _slots = (await Status.GetAsync()).Slots;
         _trip = await Shopping.NextTripAsync();
+        _tripLoaded = true;
         _today = await Menu.DayAsync(Today);
     }
 

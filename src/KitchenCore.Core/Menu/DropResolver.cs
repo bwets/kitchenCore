@@ -76,6 +76,29 @@ public static class DropResolver
             sourceSlots.RemoveAt(sourcePosition);
         }
 
+        return Land(working, moving, toDate, toSlot, mode);
+    }
+
+    /// <summary>
+    /// Places an entry that is not on the menu yet -- an undated request being
+    /// scheduled. Same rules as a move: a free slot just takes it, an occupied
+    /// one needs the user's answer.
+    /// </summary>
+    public static DropPlan Place(
+        IReadOnlyList<MenuDayRecord> days,
+        MenuEntry entry,
+        DateOnly toDate,
+        string toSlot,
+        DropMode? mode) =>
+        Land(days.ToDictionary(d => d.Date, d => d.Slots.ToList()), entry, toDate, toSlot, mode);
+
+    private static DropPlan Land(
+        Dictionary<DateOnly, List<SlotEntry>> working,
+        MenuEntry moving,
+        DateOnly toDate,
+        string toSlot,
+        DropMode? mode)
+    {
         var targetSlots = working.TryGetValue(toDate, out var existing) ? existing : working[toDate] = [];
         var occupied = targetSlots.Any(s => string.Equals(s.Slot, toSlot, StringComparison.OrdinalIgnoreCase));
 

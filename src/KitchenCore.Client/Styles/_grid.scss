@@ -439,3 +439,56 @@ body.is-dragging {
     z-index: 2;
   }
 }
+
+body.is-copying {
+  cursor: copy;
+}
+
+// Dragging a request out of the sidebar. The sidebar and its scrim sit over the
+// grid, and elementFromPoint finds whatever is on top -- so while they were
+// there, every drop landed on the scrim and nothing was ever scheduled. Taking
+// them out of hit-testing (and mostly out of sight) is what lets the drop reach
+// the day underneath.
+body.is-dragging-request {
+  .dialog-scrim--soft,
+  .sidebar {
+    pointer-events: none;
+  }
+
+  .dialog-scrim--soft {
+    opacity: 0;
+  }
+
+  .sidebar {
+    opacity: 0.25;
+  }
+}
+
+// Icon-only bar button (refresh). Square, so it does not read as a pill with
+// something missing from it.
+.week-bar__icon {
+  justify-content: center;
+  width: 2.5rem;
+  padding: 0;
+
+  &:disabled { opacity: 0.6; }
+
+  &.is-spinning svg { animation: spin 0.9s linear infinite; }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+// The edit-mode switch. Off is a quiet outline like any other button; on is
+// loud on purpose, because a menu that changes when you tap it should look it.
+.week-bar__mode.is-on {
+  background: var(--primary);
+  color: var(--on-primary);
+}
+
+// An empty cell in reading mode: holds the row height, offers nothing.
+.menu-cell--blank {
+  flex: 1 1 0;
+  min-height: 2.5rem;
+}

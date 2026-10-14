@@ -1,5 +1,6 @@
 using KitchenCore.Core.Config;
 using KitchenCore.Core.Menu;
+using KitchenCore.Core.Shopping;
 
 namespace KitchenCore.Tests;
 
@@ -21,6 +22,8 @@ public sealed class FixtureScenario : IDisposable
         Config = new AppConfigLoader(Paths);
         Requests = new RequestStore(Paths);
         Store = new MenuStore(Paths, Config, Requests);
+        Photos = new ShoppingPhotos(Paths);
+        Shopping = new ShoppingStore(Paths, Config, Photos);
     }
 
     public string Root { get; }
@@ -34,6 +37,10 @@ public sealed class FixtureScenario : IDisposable
     public RequestStore Requests { get; }
 
     public MenuStore Store { get; }
+
+    public ShoppingStore Shopping { get; }
+
+    public ShoppingPhotos Photos { get; }
 
     public string MenuRoot => Paths.MenuRoot;
 

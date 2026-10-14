@@ -1,0 +1,33 @@
+# Shopping sessions, one per week, keyed by the week's first day. Earlier weeks
+# are done, this one is placed with something not found, next week is still
+# open -- so the page has a past for suggestions, a present and a list to add to.
+year: 2026
+weeks:
+  2026-10-05:
+    order: 2026-10-07 19:00
+    delivery: 2026-10-09 10:00
+    placed: true
+    items:
+      - title: Lait
+        by: Papa
+        status: bought
+      - title: Pommes
+        by: Emma
+        status: bought
+  2026-10-12:
+    order: 2026-10-13 20:00
+    delivery: 2026-10-15 15:00
+    placed: true
+    items:
+      - title: Farine
+        by: Papa
+        status: bought
+      - title: Beurre
+        by: Papa
+        status: notFound
+  2026-10-19:
+    items:
+      - title: Yaourts nature
+        by: Emma
+      - title: Pâtes
+        by: Papa

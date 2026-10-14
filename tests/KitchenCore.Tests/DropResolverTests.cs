@@ -203,4 +203,20 @@ public class DropResolverTests
         Assert.Empty(TitlesOn(plan, 2, "lunch"));
         Assert.Equal(["Salade"], TitlesOn(plan, 2, "dinner"));
     }
+
+    [Fact]
+    public void Placing_a_request_on_an_occupied_slot_asks_like_any_drop()
+    {
+        var request = new MenuEntry { Title = "Lasagnes", Status = EntryStatus.Requested };
+
+        var refused = DropResolver.Place([Day(2, ("dinner", "Tartiflette"))], request, new DateOnly(2026, 3, 2), "dinner", mode: null);
+        Assert.False(refused.Ok);
+
+        var shifted = DropResolver.Place(
+            [Day(2, ("dinner", "Tartiflette"))], request, new DateOnly(2026, 3, 2), "dinner", DropMode.ShiftRight);
+
+        Assert.True(shifted.Ok);
+        Assert.Equal(["Lasagnes"], TitlesOn(shifted, 2, "dinner"));
+        Assert.Equal(["Tartiflette"], TitlesOn(shifted, 3, "dinner"));
+    }
 }

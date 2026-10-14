@@ -1,0 +1,860 @@
+@page "/shopping"
+@implements IAsyncDisposable
+@inject ShoppingClient Client
+@inject AuthService Auth
+@inject IJSRuntime JS
+@inject IStringLocalizer<Strings> L
+
+@*
+    One shopping session at a time: the week's order and delivery, and the
+    list for it.
+
+    Opens on the session new items go to -- the next one not ordered yet -- so
+    asking for milk on a Wednesday, after Tuesday's order went in, lands on next
+    week's list without anybody having to think about it.
+
+    No categories and no aisles, on purpose: it is a family list, not a store
+    layout. Order is whatever the family drags it into.
+*@
+
+<PageTitle>@L["Shopping_Title"] · @L["AppName"]</PageTitle>
+
+<div class="week-bar">
+    <button type="button" class="week-bar__button" @onclick="() => ShiftAsync(-7)" title="@L["Shopping_PreviousWeek"]">‹</button>
+    <button type="button" class="week-bar__button" @onclick="GoToCurrentAsync">@L["Shopping_Current"]</button>
+    <button type="button" class="week-bar__button" @onclick="() => ShiftAsync(7)" title="@L["Shopping_NextWeek"]">›</button>
+
+    <span class="week-bar__range">@WeekLabel()</span>
+    <span class="week-bar__spacer"></span>
+
+    <MenuTools Loading="_loading" OnRefresh="RefreshAsync" />
+</div>
+
+@if (_error is { Length: > 0 })
+{
+    <div class="issues">@_error</div>
+}
+
+@if (_session is { } session)
+{
+    <div class="shopping">
+        <section class="card shopping__trip">
+            <header class="shopping__trip-head">
+                <h2 class="card__title">@L["Shopping_Trip"]</h2>
+
+                <div class="shopping__badges">
+                    @if (session.Trip.Placed)
+                    {
+                        <span class="badge badge--ok">@L["Shopping_Placed"]</span>
+                    }
+                    else if (!session.Scheduled)
+                    {
+                        @* Not set for this week: it follows the last week that was. *@
+                        <span class="badge badge--soft" title="@L["Shopping_FollowsHint"]">@L["Shopping_Follows"]</span>
+                    }
+                    @if (session.Trip.Channel is { Length: > 0 } channel)
+                    {
+                        <span class="shopping__channel">@channel</span>
+                    }
+                </div>
+            </header>
+
+            @if (_editingDates)
+            {
+                <div class="shopping__dates-form">
+                    <label class="field">
+                        <span class="field__label">@L["Shopping_Order"]</span>
+                        <input type="datetime-local" class="field__input" @bind="_order" @bind:format="yyyy-MM-ddTHH:mm" />
+                    </label>
+
+                    <label class="field">
+                        <span class="field__label">@L["Shopping_Delivery"]</span>
+                        <input type="datetime-local" class="field__input" @bind="_delivery" @bind:format="yyyy-MM-ddTHH:mm" />
+                    </label>
+
+                    <label class="field field--check">
+                        <input type="checkbox" @bind="_placed" />
+                        <span>@L["Shopping_PlacedCheck"]</span>
+                    </label>
+
+                    <p class="field__hint">@L["Shopping_CarryHint"]</p>
+
+                    <footer class="dialog__foot">
+                        @if (session.Scheduled)
+                        {
+                            <button type="button" class="button" disabled="@_busy" @onclick="ResetDatesAsync">
+                                @L["Shopping_ResetDates"]
+                            </button>
+                        }
+                        <span class="dialog__spacer"></span>
+                        <button type="button" class="button" disabled="@_busy" @onclick="() => _editingDates = false">@L["Cancel"]</button>
+                        <button type="button" class="button button--primary"
+                                disabled="@(_busy || _delivery < _order)"
+                                @onclick="SaveDatesAsync">
+                            @L["Save"]
+                        </button>
+                    </footer>
+                </div>
+            }
+            else
+            {
+                <ul class="moments shopping__moments">
+                    @foreach (var (moment, kind, label) in new[]
+                    {
+                        (session.Trip.Order, "order", "Shopping_Order"),
+                        (session.Trip.Delivery, "delivery", "Shopping_Delivery"),
+                    })
+                    {
+                        <li class="moment moment--@kind">
+                            <span class="moment__rule" aria-hidden="true"></span>
+                            <span class="moment__text">
+                                <span class="moment__label">@L[label]</span>
+                                <span class="moment__when">@Format(moment)</span>
+                            </span>
+                            <span class="badge @(moment.IsPredicted ? "badge--soft" : "badge--ok")">
+                                @(moment.IsPredicted ? L["Shopping_Predicted"] : L["Shopping_Confirmed"])
+                            </span>
+                        </li>
+                    }
+                </ul>
+
+                @if (CanEdit)
+                {
+                    <footer class="shopping__trip-actions">
+                        <button type="button" class="button" @onclick="StartEditingDates">@L["Shopping_EditDates"]</button>
+                        <button type="button" class="button @(session.Trip.Placed ? null : "button--primary")"
+                                disabled="@_busy" @onclick="TogglePlacedAsync">
+                            @(session.Trip.Placed ? L["Shopping_Unplace"] : L["Shopping_Place"])
+                        </button>
+                    </footer>
+                }
+            }
+        </section>
+
+        <section class="card shopping__list">
+            <header class="card__head">
+                <h2 class="card__title">
+                    @L["Shopping_List"]
+                    @if (session.Items.Count > 0)
+                    {
+                        <span class="shopping__count">@session.Items.Count(i => i.Done)/@session.Items.Count</span>
+                    }
+                </h2>
+
+                @if (DoneCount > 0)
+                {
+                    <button type="button" class="shopping__filter @(_hideDone ? null : "is-on")"
+                            aria-pressed="@(!_hideDone)"
+                            @onclick="() => _hideDone = !_hideDone">
+                        @(_hideDone ? string.Format(L["Shopping_ShowDone"], DoneCount) : L["Shopping_HideDone"])
+                    </button>
+                }
+            </header>
+
+            @if (CanRequest)
+            {
+                @if (session.Trip.Placed)
+                {
+                    <p class="field__hint">@L["Shopping_AlreadyPlaced"]</p>
+                }
+
+                <div class="shopping__add" @onfocusout="CloseSuggestions">
+                    <div class="suggest">
+                        <input class="field__input" placeholder="@L["Shopping_AddPlaceholder"]"
+                               role="combobox" aria-autocomplete="list" aria-expanded="@SuggestionsShown"
+                               autocomplete="off"
+                               value="@_newItem"
+                               @onfocus="OpenSuggestionsAsync"
+                               @onclick="OpenSuggestionsAsync"
+                               @oninput="OnAddInput"
+                               @onkeydown="OnAddKeyDown" />
+
+                        @if (SuggestionsShown)
+                        {
+                            var index = 0;
+
+                            @* mousedown is swallowed so the input keeps focus: picking one item
+                               leaves the list open for the next. *@
+                            <div class="suggest__panel" role="listbox" @onmousedown:preventDefault>
+                                @foreach (var group in _options)
+                                {
+                                    @if (group.Label is { } label)
+                                    {
+                                        <div class="suggest__group">@label</div>
+                                    }
+
+                                    @foreach (var suggestion in group.Items)
+                                    {
+                                        var at = index++;
+                                        <button type="button" role="option" tabindex="-1"
+                                                class="suggest__option @(at == _highlight ? "is-active" : null)"
+                                                aria-selected="@(at == _highlight)"
+                                                @onclick="() => PickAsync(suggestion)">
+                                            @if (suggestion.Photo is { } photo)
+                                            {
+                                                <ShoppingPhoto Path="@photo" Class="suggest__thumb" />
+                                            }
+                                            <span>@suggestion.Title</span>
+                                        </button>
+                                    }
+                                }
+                            </div>
+                        }
+                    </div>
+
+                    <button type="button" class="button button--primary"
+                            disabled="@(_busy || string.IsNullOrWhiteSpace(_newItem))"
+                            @onclick="() => AddAsync()">
+                        @L["Shopping_Add"]
+                    </button>
+                </div>
+
+                @* Labels wrapping the inputs: one tap opens the camera or the picker,
+                   and the picture goes up as soon as it is chosen, with no confirm step.
+                   Whatever is typed in the box becomes its title. *@
+                <div class="shopping__snap">
+                    <label class="snap-button snap-button--camera @(_uploading ? "is-busy" : null)">
+                        <input type="file" accept="image/*" capture="environment" class="visually-hidden"
+                               disabled="@_uploading" @ref="_cameraInput"
+                               @onchange="() => UploadAsync(_cameraInput)" />
+                        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M4 8h3l1.6-2.4h6.8L17 8h3v11H4z" />
+                            <circle cx="12" cy="13.2" r="3.6" />
+                        </svg>
+                        <span>@(_uploading ? L["Shopping_Uploading"] : L["Shopping_TakePhoto"])</span>
+                    </label>
+
+                    <label class="snap-button @(_uploading ? "is-busy" : null)">
+                        <input type="file" accept="image/*" multiple class="visually-hidden"
+                               disabled="@_uploading" @ref="_fileInput"
+                               @onchange="() => UploadAsync(_fileInput)" />
+                        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true">
+                            <rect x="3.5" y="4.5" width="17" height="15" rx="2" />
+                            <circle cx="9" cy="9.5" r="1.6" />
+                            <path d="M4 17l5-5 4 4 2.5-2.5L20 17" />
+                        </svg>
+                        <span>@(_uploading ? L["Shopping_Uploading"] : L["Shopping_AddPicture"])</span>
+                    </label>
+                </div>
+            }
+
+            @if (session.Items.Count == 0)
+            {
+                <p class="muted">@L["Shopping_Empty"]</p>
+            }
+            else if (_hideDone && DoneCount == session.Items.Count)
+            {
+                <p class="muted">@L["Shopping_AllDone"]</p>
+            }
+
+            <ul class="shopping__items" data-sort-list @ref="_list">
+                @foreach (var item in session.Items.Where(i => !_hideDone || !i.Done))
+                {
+                    <li class="shopping-item @StatusClass(item.Status)" data-sort-item="@item.Ordinal"
+                        @key="(item.Ordinal, item.Title)">
+                        @if (CanRequest)
+                        {
+                            <span class="shopping-item__handle" data-sort-handle title="@L["Shopping_DragHint"]" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                                    <circle cx="9" cy="6" r="1.6" /><circle cx="15" cy="6" r="1.6" />
+                                    <circle cx="9" cy="12" r="1.6" /><circle cx="15" cy="12" r="1.6" />
+                                    <circle cx="9" cy="18" r="1.6" /><circle cx="15" cy="18" r="1.6" />
+                                </svg>
+                            </span>
+                        }
+
+                        @if (CanEdit)
+                        {
+                            @* The common case, bought, stays one tap; the rest is in the menu. *@
+                            <input type="checkbox" class="shopping-item__check"
+                                   checked="@(item.Status == ShoppingItemStatus.Bought)"
+                                   aria-label="@L["Shopping_MarkDone"]"
+                                   @onchange="e => SetStatusAsync(item, (bool?)e.Value == true ? ShoppingItemStatus.Bought : ShoppingItemStatus.Open)" />
+                        }
+                        else if (item.Status == ShoppingItemStatus.Bought)
+                        {
+                            <span class="shopping-item__tick" aria-label="@L["Shopping_Done"]">✓</span>
+                        }
+
+                        @if (item.Photo is { } photo)
+                        {
+                            <button type="button" class="shopping-item__photo"
+                                    aria-label="@L["Shopping_ShowPhoto"]" @onclick="() => _lightbox = photo">
+                                <ShoppingPhoto Path="@photo" Alt="@item.Title" />
+                            </button>
+                        }
+
+                        <span class="shopping-item__title">
+                            @item.Title
+                            @if (StatusLabel(item.Status) is { } status)
+                            {
+                                <span class="badge shopping-item__status">@status</span>
+                            }
+                        </span>
+
+                        @if (!string.IsNullOrWhiteSpace(item.By))
+                        {
+                            <span class="shopping-item__by">@item.By</span>
+                        }
+
+                        @if (CanEdit)
+                        {
+                            <span class="shopping-item__menu-anchor">
+                                <button type="button" class="shopping-item__more"
+                                        aria-label="@L["Shopping_More"]" aria-haspopup="menu"
+                                        aria-expanded="@IsMenuOpen(item)"
+                                        @onclick="() => ToggleMenu(item)">
+                                    <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true">
+                                        <circle cx="12" cy="5.5" r="1.8" /><circle cx="12" cy="12" r="1.8" /><circle cx="12" cy="18.5" r="1.8" />
+                                    </svg>
+                                </button>
+
+                                @if (IsMenuOpen(item))
+                                {
+                                    <div class="item-menu__scrim" @onclick="() => _menuFor = null"></div>
+                                    <div class="item-menu" role="menu">
+                                        @if (item.Status != ShoppingItemStatus.NotFound)
+                                        {
+                                            <button type="button" role="menuitem" @onclick="() => SetStatusAsync(item, ShoppingItemStatus.NotFound)">@L["Shopping_MarkNotFound"]</button>
+                                        }
+                                        @if (item.Status != ShoppingItemStatus.Refused)
+                                        {
+                                            <button type="button" role="menuitem" @onclick="() => SetStatusAsync(item, ShoppingItemStatus.Refused)">@L["Shopping_MarkRefused"]</button>
+                                        }
+                                        @if (item.Done)
+                                        {
+                                            <button type="button" role="menuitem" @onclick="() => SetStatusAsync(item, ShoppingItemStatus.Open)">@L["Shopping_Reopen"]</button>
+                                        }
+                                        <button type="button" role="menuitem" @onclick="() => PostponeAsync(item)">@L["Shopping_Postpone"]</button>
+                                        <button type="button" role="menuitem" class="item-menu__danger" @onclick="() => RemoveAsync(item)">@L["Shopping_Remove"]</button>
+                                    </div>
+                                }
+                            </span>
+                        }
+                        else if (CanRemove(item))
+                        {
+                            <button type="button" class="shopping-item__remove"
+                                    title="@L["Shopping_Remove"]" aria-label="@L["Shopping_Remove"]"
+                                    disabled="@_busy"
+                                    @onclick="() => RemoveAsync(item)">×</button>
+                        }
+                    </li>
+                }
+            </ul>
+        </section>
+    </div>
+
+    @if (_lightbox is { } full)
+    {
+        <div class="lightbox" role="dialog" aria-modal="true" tabindex="-1" @ref="_lightboxRef"
+             @onclick="() => _lightbox = null" @onkeydown="OnLightboxKey">
+            <ShoppingPhoto Path="@full" Class="lightbox__img" />
+            <button type="button" class="lightbox__close" aria-label="@L["Close"]">×</button>
+        </div>
+    }
+}
+else if (_loading)
+{
+    <p class="loading">@L["Loading"]</p>
+}
+
+@code {
+    private ShoppingSession? _session;
+    private DateOnly? _week;
+    private bool _loading = true;
+    private bool _busy;
+    private string? _error;
+    private string _newItem = string.Empty;
+
+    private bool _editingDates;
+    private DateTime _order;
+    private DateTime _delivery;
+    private bool _placed;
+
+    private ElementReference _list;
+    private IJSObjectReference? _sortable;
+    private DotNetObjectReference<Shopping>? _self;
+    private readonly string _sortId = Guid.NewGuid().ToString("N");
+    private AutoRefresh? _autoRefresh;
+
+    // Ticked-off items are out of the way by default: the list is what is still to get.
+    private bool _hideDone = true;
+
+    // The add box's suggestions: fetched once per week, filtered here as the person types.
+    private ShoppingSuggestions? _suggestions;
+    private DateOnly? _suggestionsWeek;
+    private bool _suggestOpen;
+    private List<SuggestionGroup> _options = [];
+    private int _highlight = -1;
+
+    private const int MaxMatches = 12;
+
+    private sealed record SuggestionGroup(string? Label, IReadOnlyList<ShoppingSuggestion> Items);
+
+    // Pictures: the two hidden file inputs behind the big buttons, and the one shown full screen.
+    private ElementReference _cameraInput;
+    private ElementReference _fileInput;
+    private IJSObjectReference? _photos;
+    private bool _uploading;
+    private string? _lightbox;
+    private ElementReference _lightboxRef;
+    private bool _lightboxFocused;
+
+    // The item whose action menu is open, by the same (ordinal, title) pair that addresses it.
+    private (int Ordinal, string Title)? _menuFor;
+
+    private int DoneCount => _session?.Items.Count(i => i.Done) ?? 0;
+
+    private bool SuggestionsShown => _suggestOpen && _options.Count > 0;
+
+    private bool CanEdit => Auth.Identity.CanEdit(Section.Shopping);
+
+    private bool CanRequest => Auth.Identity.CanRequest(Section.Shopping);
+
+    /// <summary>Editors remove anything; everyone else only what they added.</summary>
+    private bool CanRemove(ShoppingItem item) =>
+        CanEdit || (CanRequest && string.Equals(item.By, Auth.Identity.Name, StringComparison.Ordinal));
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+
+        _autoRefresh = new AutoRefresh(JS);
+        await _autoRefresh.StartAsync(() => InvokeAsync(() => LoadAsync(quiet: true)), () => !_editingDates && !_busy && !_uploading && _menuFor is null && _lightbox is null);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // The list element exists only once a session has rendered, so attach
+        // the first time it does rather than on the first render.
+        if (_sortable is null && _session is not null && CanRequest)
+        {
+            _self ??= DotNetObjectReference.Create(this);
+            _sortable = await JS.InvokeAsync<IJSObjectReference>("import", "./js/sortable.js");
+            await _sortable.InvokeVoidAsync("attach", _sortId, _list, _self);
+        }
+
+        // Focused once it opens, so Escape reaches it.
+        if (_lightbox is not null && !_lightboxFocused)
+        {
+            _lightboxFocused = true;
+            await _lightboxRef.FocusAsync();
+        }
+        else if (_lightbox is null)
+        {
+            _lightboxFocused = false;
+        }
+    }
+
+    /// <summary>
+    /// Loads the chosen week, or -- before one is chosen -- the session new
+    /// items should go to.
+    /// </summary>
+    private async Task LoadAsync(bool quiet = false)
+    {
+        if (!quiet)
+        {
+            _loading = true;
+        }
+
+        try
+        {
+            _session = _week is { } week ? await Client.SessionAsync(week) : await Client.CurrentAsync();
+            _week = _session.Week;
+            _error = null;
+        }
+        catch (ApiException ex)
+        {
+            _error = L[ex.ResourceKey];
+        }
+
+        _loading = false;
+        StateHasChanged();
+    }
+
+    private Task RefreshAsync() => LoadAsync();
+
+    private async Task ShiftAsync(int days)
+    {
+        if (_week is { } week)
+        {
+            _week = week.AddDays(days);
+            _editingDates = false;
+            await LoadAsync();
+        }
+    }
+
+    private async Task GoToCurrentAsync()
+    {
+        _week = null;
+        _editingDates = false;
+        await LoadAsync();
+    }
+
+    /// <summary>Applies a write's answer, which is the session as it now stands.</summary>
+    private async Task ApplyAsync(Func<Task<ShoppingOutcome>> write)
+    {
+        _busy = true;
+
+        try
+        {
+            var outcome = await write();
+
+            if (outcome.Session is { } session)
+            {
+                _session = session;
+                _error = null;
+            }
+            else
+            {
+                _error = outcome.ResourceKey is { Length: > 0 } key ? L[key].Value : null;
+
+                // Most likely the list moved under us: show what is there now.
+                await LoadAsync(quiet: true);
+            }
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private async Task OnAddKeyDown(KeyboardEventArgs args)
+    {
+        var count = _options.Sum(g => g.Items.Count);
+
+        switch (args.Key)
+        {
+            case "ArrowDown" when count > 0:
+                _suggestOpen = true;
+                _highlight = (_highlight + 1) % count;
+                break;
+
+            case "ArrowUp" when count > 0:
+                _suggestOpen = true;
+                _highlight = _highlight <= 0 ? count - 1 : _highlight - 1;
+                break;
+
+            case "Escape":
+                _suggestOpen = false;
+                _highlight = -1;
+                break;
+
+            case "Enter":
+                if (SuggestionsShown && _highlight >= 0 && _options.SelectMany(g => g.Items).ElementAtOrDefault(_highlight) is { } picked)
+                {
+                    await PickAsync(picked);
+                }
+                else
+                {
+                    await AddAsync();
+                }
+                break;
+        }
+    }
+
+    private void OnAddInput(ChangeEventArgs e)
+    {
+        _newItem = e.Value?.ToString() ?? string.Empty;
+        _suggestOpen = true;
+        BuildOptions();
+    }
+
+    private async Task OpenSuggestionsAsync()
+    {
+        _suggestOpen = true;
+
+        if (_week is { } week && (_suggestions is null || _suggestionsWeek != week))
+        {
+            _suggestionsWeek = week;
+            _suggestions = await Client.SuggestionsAsync(week);
+        }
+
+        BuildOptions();
+    }
+
+    private void CloseSuggestions()
+    {
+        _suggestOpen = false;
+        _highlight = -1;
+    }
+
+    /// <summary>
+    /// Empty box: the last few weeks, grouped by week, most recent first. Once
+    /// something is typed: every past title that matches. Either way, nothing
+    /// already on this week's list -- loosely matched, see ShoppingTitles.
+    /// </summary>
+    private void BuildOptions()
+    {
+        _highlight = -1;
+
+        if (_suggestions is null)
+        {
+            _options = [];
+            return;
+        }
+
+        var onList = (_session?.Items ?? []).Select(i => ShoppingTitles.Key(i.Title)).ToHashSet();
+        var typed = ShoppingTitles.Key(_newItem);
+
+        if (typed.Length == 0)
+        {
+            _options =
+            [
+                .. _suggestions.Recent
+                    .Select(w => new SuggestionGroup(
+                        string.Format(L["Shopping_WeekOf"], w.Week.ToString("d MMMM")),
+                        [.. w.Items.Where(s => !onList.Contains(ShoppingTitles.Key(s.Title)))]))
+                    .Where(g => g.Items.Count > 0),
+            ];
+            return;
+        }
+
+        // Words that start the title rank above words found inside it.
+        var matches = _suggestions.All
+            .Select(s => (Suggestion: s, Key: ShoppingTitles.Key(s.Title)))
+            .Where(t => !onList.Contains(t.Key) && t.Key.Contains(typed, StringComparison.Ordinal))
+            .OrderBy(t => t.Key.StartsWith(typed, StringComparison.Ordinal) ? 0 : 1)
+            .Take(MaxMatches)
+            .Select(t => t.Suggestion)
+            .ToList();
+
+        _options = matches.Count > 0 ? [new SuggestionGroup(null, matches)] : [];
+    }
+
+    /// <summary>A past item, picture and all: the file is pointed at, not copied.</summary>
+    private async Task PickAsync(ShoppingSuggestion suggestion)
+    {
+        _newItem = suggestion.Title;
+        await AddAsync(suggestion.Photo);
+    }
+
+    private async Task AddAsync() => await AddAsync(photo: null);
+
+    private async Task AddAsync(string? photo)
+    {
+        if (_week is not { } week || string.IsNullOrWhiteSpace(_newItem))
+        {
+            return;
+        }
+
+        var title = _newItem.Trim();
+        _newItem = string.Empty;
+        await ApplyAsync(() => Client.AddItemAsync(week, title, photo));
+
+        // What was just added drops out of the suggestions.
+        BuildOptions();
+    }
+
+    private Task SetStatusAsync(ShoppingItem item, ShoppingItemStatus status)
+    {
+        _menuFor = null;
+        return _week is { } week ? ApplyAsync(() => Client.SetStatusAsync(week, item, status)) : Task.CompletedTask;
+    }
+
+    private Task PostponeAsync(ShoppingItem item)
+    {
+        _menuFor = null;
+        return _week is { } week ? ApplyAsync(() => Client.PostponeAsync(week, item)) : Task.CompletedTask;
+    }
+
+    private Task RemoveAsync(ShoppingItem item)
+    {
+        _menuFor = null;
+        return _week is { } week ? ApplyAsync(() => Client.RemoveItemAsync(week, item)) : Task.CompletedTask;
+    }
+
+    private bool IsMenuOpen(ShoppingItem item) => _menuFor == (item.Ordinal, item.Title);
+
+    private void ToggleMenu(ShoppingItem item) =>
+        _menuFor = IsMenuOpen(item) ? null : (item.Ordinal, item.Title);
+
+    private static string? StatusClass(ShoppingItemStatus status) => status switch
+    {
+        ShoppingItemStatus.Bought => "is-done",
+        ShoppingItemStatus.NotFound => "is-done is-not-found",
+        ShoppingItemStatus.Refused => "is-done is-refused",
+        _ => null,
+    };
+
+    /// <summary>Bought shows as the tick; the other two endings need saying.</summary>
+    private string? StatusLabel(ShoppingItemStatus status) => status switch
+    {
+        ShoppingItemStatus.NotFound => L["Shopping_NotFound"].Value,
+        ShoppingItemStatus.Refused => L["Shopping_Refused"].Value,
+        _ => null,
+    };
+
+    /// <summary>
+    /// A picture from the camera or the files: js/photos.js shrinks and sends
+    /// it (the bytes never pass through .NET) and hands back the session. The
+    /// text in the add box, if any, becomes its title.
+    /// </summary>
+    private async Task UploadAsync(ElementReference input)
+    {
+        if (_week is not { } week)
+        {
+            return;
+        }
+
+        _uploading = true;
+        StateHasChanged();
+
+        try
+        {
+            _photos ??= await JS.InvokeAsync<IJSObjectReference>("import", "./js/photos.js");
+
+            var title = _newItem.Trim();
+            var result = await _photos.InvokeAsync<UploadResult?>("upload", input, ShoppingClient.PhotoUploadUrl(week), title);
+
+            if (result is null)
+            {
+                return;   // Nothing chosen: the camera was cancelled.
+            }
+
+            if (result.Body is { } body
+                && System.Text.Json.JsonSerializer.Deserialize<ShoppingSession>(body, System.Text.Json.JsonSerializerOptions.Web) is { } session)
+            {
+                _session = session;
+                _newItem = string.Empty;
+                _error = null;
+                BuildOptions();
+            }
+            else
+            {
+                _error = L[result.Status == 0 ? "Error_Unreachable" : "Shopping_UploadFailed"];
+            }
+        }
+        finally
+        {
+            _uploading = false;
+        }
+    }
+
+    private sealed record UploadResult(int Status, string? Body);
+
+    private void OnLightboxKey(KeyboardEventArgs args)
+    {
+        if (args.Key is "Escape" or "Enter" or " ")
+        {
+            _lightbox = null;
+        }
+    }
+
+    /// <summary>Called by js/sortable.js once, when a reorder is dropped.</summary>
+    [JSInvokable]
+    public async Task HandleSort(int from, int to)
+    {
+        if (_week is not { } week || _session?.Items.FirstOrDefault(i => i.Ordinal == from) is not { } item)
+        {
+            return;
+        }
+
+        await ApplyAsync(() => Client.MoveItemAsync(week, item, to));
+        StateHasChanged();
+    }
+
+    private void StartEditingDates()
+    {
+        if (_session is null)
+        {
+            return;
+        }
+
+        _order = _session.Trip.Order.At;
+        _delivery = _session.Trip.Delivery.At;
+        _placed = _session.Trip.Placed;
+        _editingDates = true;
+    }
+
+    private async Task SaveDatesAsync()
+    {
+        if (_week is not { } week)
+        {
+            return;
+        }
+
+        var update = new ShoppingScheduleUpdate
+        {
+            Order = _order,
+            Delivery = _delivery,
+            Placed = _placed,
+            Channel = _session?.Trip.Channel,
+        };
+
+        await ApplyAsync(() => Client.SetScheduleAsync(week, update));
+        _editingDates = false;
+    }
+
+    private async Task ResetDatesAsync()
+    {
+        if (_week is { } week)
+        {
+            await ApplyAsync(() => Client.ClearScheduleAsync(week));
+            _editingDates = false;
+        }
+    }
+
+    /// <summary>
+    /// "The order is in." Pins this week's dates as they stand -- predicted
+    /// ones included -- and marks them confirmed.
+    /// </summary>
+    private Task TogglePlacedAsync()
+    {
+        if (_week is not { } week || _session is null)
+        {
+            return Task.CompletedTask;
+        }
+
+        var update = new ShoppingScheduleUpdate
+        {
+            Order = _session.Trip.Order.At,
+            Delivery = _session.Trip.Delivery.At,
+            Placed = !_session.Trip.Placed,
+            Channel = _session.Trip.Channel,
+        };
+
+        return ApplyAsync(() => Client.SetScheduleAsync(week, update));
+    }
+
+    private string WeekLabel() =>
+        _week is { } week ? string.Format(L["Shopping_WeekOf"], week.ToString("d MMMM yyyy")) : string.Empty;
+
+    /// <summary>Both date and time matter here, so both are shown.</summary>
+    private static string Format(ShoppingMoment moment) => moment.At.ToString("dddd d MMM, HH:mm");
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_autoRefresh is not null)
+        {
+            await _autoRefresh.DisposeAsync();
+        }
+
+        if (_sortable is not null)
+        {
+            try
+            {
+                await _sortable.InvokeVoidAsync("detach", _sortId);
+                await _sortable.DisposeAsync();
+            }
+            catch (Exception ex) when (ex is JSException or JSDisconnectedException)
+            {
+                // The page is going away.
+            }
+        }
+
+        if (_photos is not null)
+        {
+            try
+            {
+                await _photos.DisposeAsync();
+            }
+            catch (JSDisconnectedException)
+            {
+                // The page is going away.
+            }
+        }
+
+        _self?.Dispose();
+    }
+}

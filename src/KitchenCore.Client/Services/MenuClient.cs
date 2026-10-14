@@ -156,24 +156,49 @@ public sealed class MenuClient(HttpClient http)
     /// <summary>
     /// Turns an undated request into a real entry. The title travels with the
     /// ordinal because the file has no ids: if somebody scheduled another request
-    /// first, everything after it shifted up.
+    /// first, everything after it shifted up. <paramref name="mode"/> answers an
+    /// occupied slot, as for any drop.
     /// </summary>
-    public async Task<bool> ScheduleRequestAsync(
+    public Task<MenuWriteOutcome> ScheduleRequestAsync(
         MenuRequest request,
         DateOnly date,
         string slot,
+        DropMode? mode = null,
+        string? version = null,
         CancellationToken cancellationToken = default)
     {
-        var response = await http.PostAsJsonAsync("api/menu/requests/schedule", new
+        var message = new HttpRequestMessage(HttpMethod.Post, "api/menu/requests/schedule")
         {
-            ordinal = request.Ordinal,
-            title = request.Title,
-            date = Iso(date),
-            slot,
-        }, cancellationToken);
+            Content = JsonContent.Create(ScheduleBody(request, date, slot, mode)),
+        };
 
-        return response.IsSuccessStatusCode;
+        return SendAsync(message, version, cancellationToken);
     }
+
+    /// <summary>What a shift-right would cascade if a request landed here.</summary>
+    public async Task<ShiftPreview> PreviewScheduleAsync(
+        MenuRequest request,
+        DropTarget to,
+        CancellationToken cancellationToken = default)
+    {
+        var response = await http.PostAsJsonAsync(
+            "api/menu/requests/schedule/preview",
+            ScheduleBody(request, to.Date, to.Slot, DropMode.ShiftRight),
+            cancellationToken);
+
+        return response.IsSuccessStatusCode
+            ? await response.Content.ReadFromJsonAsync<ShiftPreview>(cancellationToken) ?? new ShiftPreview()
+            : new ShiftPreview();
+    }
+
+    private static object ScheduleBody(MenuRequest request, DateOnly date, string slot, DropMode? mode) => new
+    {
+        ordinal = request.Ordinal,
+        title = request.Title,
+        date = Iso(date),
+        slot,
+        mode,
+    };
 
     public async Task<bool> DropRequestAsync(MenuRequest request, CancellationToken cancellationToken = default)
     {

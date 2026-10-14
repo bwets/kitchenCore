@@ -196,6 +196,60 @@ public sealed class MenuStore(KitchenPaths paths, AppConfigLoader config, Reques
         var days = index.Range(from, to).ToList();
         var plan = DropResolver.Resolve(days, fromDate, fromSlot, fromIndex, toDate, toSlot, copy, mode);
 
+        return await ApplyAsync(index, days, plan, from, to, cancellationToken);
+    }
+
+    /// <summary>
+    /// Puts a new entry at (date, slot) under the same collision rules as a drop:
+    /// a free slot takes it, an occupied one needs <paramref name="mode"/>. Used to
+    /// schedule an undated request, which can shift-right a week as well as any
+    /// dragged meal can.
+    /// </summary>
+    public async Task<MenuMoveResult> PlaceAsync(
+        MenuEntry entry,
+        DateOnly toDate,
+        string toSlot,
+        DropMode? mode = null,
+        string? expectedVersion = null,
+        CancellationToken cancellationToken = default)
+    {
+        var from = toDate;
+        var to = toDate.AddDays(60);
+
+        var index = MenuShardIndex.Load(paths.MenuRoot, from, to);
+
+        if (expectedVersion is not null && expectedVersion != index.Version)
+        {
+            return new MenuMoveResult { Success = false, Conflict = true, Error = "The menu changed on disk." };
+        }
+
+        var days = index.Range(from, to).ToList();
+        var plan = DropResolver.Place(days, entry, toDate, toSlot, mode);
+
+        return await ApplyAsync(index, days, plan, from, to, cancellationToken);
+    }
+
+    /// <summary>What a shift-right would push if a new entry landed here.</summary>
+    public ShiftPreview PreviewPlace(DateOnly toDate, string toSlot)
+    {
+        var days = MenuShardIndex.Load(paths.MenuRoot, toDate, toDate.AddDays(60)).Range(toDate, toDate.AddDays(60)).ToList();
+        var plan = DropResolver.Place(days, new MenuEntry { Title = string.Empty }, toDate, toSlot, DropMode.ShiftRight);
+
+        return new ShiftPreview { Steps = plan.Steps };
+    }
+
+    /// <summary>
+    /// Writes a resolved plan. A shift-right cascade can cross a month or a year,
+    /// so every affected shard is written together rather than one at a time.
+    /// </summary>
+    private async Task<MenuMoveResult> ApplyAsync(
+        MenuShardIndex index,
+        List<MenuDayRecord> days,
+        DropPlan plan,
+        DateOnly from,
+        DateOnly to,
+        CancellationToken cancellationToken)
+    {
         if (!plan.Ok)
         {
             return new MenuMoveResult { Success = false, Error = plan.Error };

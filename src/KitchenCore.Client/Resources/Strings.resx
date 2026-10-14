@@ -149,4 +149,52 @@
   <data name="Nav_Soon" xml:space="preserve"><value>soon</value></data>
   <data name="Nav_Administration" xml:space="preserve"><value>Administration</value></data>
   <data name="Nav_Devices" xml:space="preserve"><value>Devices</value></data>
+  <data name="Refresh" xml:space="preserve"><value>Refresh</value></data>
+  <data name="Mode_Edit" xml:space="preserve"><value>Edit</value></data>
+  <data name="Mode_Done" xml:space="preserve"><value>Done</value></data>
+  <data name="Mode_ViewingHint" xml:space="preserve"><value>Reading the menu. Switch to edit mode to add, change or move meals.</value></data>
+  <data name="Mode_EditingHint" xml:space="preserve"><value>Editing: tap a cell to add, drag to move, hold Ctrl while dragging to copy.</value></data>
+  <data name="Nav_ShoppingList" xml:space="preserve"><value>List</value></data>
+  <data name="Home_OpenShopping" xml:space="preserve"><value>Open the list</value></data>
+  <data name="Shopping_Title" xml:space="preserve"><value>Shopping</value></data>
+  <data name="Shopping_PreviousWeek" xml:space="preserve"><value>Previous week</value></data>
+  <data name="Shopping_NextWeek" xml:space="preserve"><value>Next week</value></data>
+  <data name="Shopping_Current" xml:space="preserve"><value>Current</value></data>
+  <data name="Shopping_WeekOf" xml:space="preserve"><value>Week of {0}</value></data>
+  <data name="Shopping_Trip" xml:space="preserve"><value>Order and delivery</value></data>
+  <data name="Shopping_Confirmed" xml:space="preserve"><value>confirmed</value></data>
+  <data name="Shopping_Placed" xml:space="preserve"><value>Order placed</value></data>
+  <data name="Shopping_Follows" xml:space="preserve"><value>Same as last week</value></data>
+  <data name="Shopping_FollowsHint" xml:space="preserve"><value>Not set for this week: it follows the last week whose dates were set, or the usual rhythm.</value></data>
+  <data name="Shopping_EditDates" xml:space="preserve"><value>Change dates</value></data>
+  <data name="Shopping_Place" xml:space="preserve"><value>Order placed</value></data>
+  <data name="Shopping_Unplace" xml:space="preserve"><value>Not placed after all</value></data>
+  <data name="Shopping_PlacedCheck" xml:space="preserve"><value>The order has been placed</value></data>
+  <data name="Shopping_CarryHint" xml:space="preserve"><value>The following weeks keep these days and times until one of them is changed.</value></data>
+  <data name="Shopping_ResetDates" xml:space="preserve"><value>Back to the usual</value></data>
+  <data name="Shopping_List" xml:space="preserve"><value>List</value></data>
+  <data name="Shopping_AlreadyPlaced" xml:space="preserve"><value>This order has already been placed: what you add now may not make it in.</value></data>
+  <data name="Shopping_AddPlaceholder" xml:space="preserve"><value>Something to buy…</value></data>
+  <data name="Shopping_Add" xml:space="preserve"><value>Add</value></data>
+  <data name="Shopping_Empty" xml:space="preserve"><value>Nothing on the list yet.</value></data>
+  <data name="Shopping_DragHint" xml:space="preserve"><value>Drag to reorder</value></data>
+  <data name="Shopping_MarkDone" xml:space="preserve"><value>Bought</value></data>
+  <data name="Shopping_Done" xml:space="preserve"><value>bought</value></data>
+  <data name="Shopping_ShowDone" xml:space="preserve"><value>Show done ({0})</value></data>
+  <data name="Shopping_HideDone" xml:space="preserve"><value>Hide done</value></data>
+  <data name="Shopping_AllDone" xml:space="preserve"><value>Everything is dealt with.</value></data>
+  <data name="Shopping_TakePhoto" xml:space="preserve"><value>Take a photo</value></data>
+  <data name="Shopping_AddPicture" xml:space="preserve"><value>Add a picture</value></data>
+  <data name="Shopping_Uploading" xml:space="preserve"><value>Sending…</value></data>
+  <data name="Shopping_UploadFailed" xml:space="preserve"><value>The picture could not be added.</value></data>
+  <data name="Shopping_ShowPhoto" xml:space="preserve"><value>Show the picture</value></data>
+  <data name="Shopping_More" xml:space="preserve"><value>More</value></data>
+  <data name="Shopping_MarkNotFound" xml:space="preserve"><value>Not found</value></data>
+  <data name="Shopping_MarkRefused" xml:space="preserve"><value>Refuse</value></data>
+  <data name="Shopping_Reopen" xml:space="preserve"><value>Back on the list</value></data>
+  <data name="Shopping_Postpone" xml:space="preserve"><value>Move to next week</value></data>
+  <data name="Shopping_NotFound" xml:space="preserve"><value>not found</value></data>
+  <data name="Shopping_Refused" xml:space="preserve"><value>refused</value></data>
+  <data name="Shopping_Remove" xml:space="preserve"><value>Remove</value></data>
+  <data name="Shopping_Gone" xml:space="preserve"><value>That item had already changed; here is the list as it is now.</value></data>
 </root>

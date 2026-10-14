@@ -62,7 +62,12 @@
                     </span>
                 }
 
-                @if (cell is null || cell.IsEmpty)
+                @if ((cell is null || cell.IsEmpty) && !Editable)
+                {
+                    @* Reading, not planning: an empty cell is just empty. *@
+                    <div class="menu-cell menu-cell--blank"></div>
+                }
+                else if (cell is null || cell.IsEmpty)
                 {
                     <button type="button"
                             class="menu-cell menu-cell--empty"
@@ -86,13 +91,13 @@
                             <button type="button"
                                     class="menu-entry @(entry.Status == EntryStatus.Requested ? "is-requested" : null)"
                                     title="@Tooltip(entry)"
-                                    data-drag-date="@day.Date.ToString("yyyy-MM-dd")"
-                                    data-drag-slot="@slot.Key"
-                                    data-drag-index="@index"
-                                    data-drag-title="@entry.Title"
+                                    data-drag-date="@(Editable ? day.Date.ToString("yyyy-MM-dd") : null)"
+                                    data-drag-slot="@(Editable ? slot.Key : null)"
+                                    data-drag-index="@(Editable ? index : null)"
+                                    data-drag-title="@(Editable ? entry.Title : null)"
                                     @onclick="() => OnEdit.InvokeAsync(new MenuEntryRef(day.Date, slot.Key, index, entry))"
                                     @oncontextmenu="() => OnMoveMenu.InvokeAsync(new MenuEntryRef(day.Date, slot.Key, index, entry))"
-                                    @oncontextmenu:preventDefault="true">
+                                    @oncontextmenu:preventDefault="Editable">
                                 <span class="menu-entry__title">@entry.Title</span>
 
                                 @if (!string.IsNullOrWhiteSpace(entry.Notes))
@@ -126,6 +131,13 @@
     /// </summary>
     [Parameter]
     public bool Compact { get; set; }
+
+    /// <summary>
+    /// Edit mode. Off, the grid is for reading: no add targets, nothing to drag,
+    /// and tapping a meal shows it rather than opening an editor.
+    /// </summary>
+    [Parameter]
+    public bool Editable { get; set; }
 
     /// <summary>Shown in the grid's corner. Carries the week range in multi-week.</summary>
     [Parameter]

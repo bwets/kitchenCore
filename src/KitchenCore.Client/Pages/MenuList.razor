@@ -1,11 +1,6 @@
 @page "/menu/list"
-@implements IAsyncDisposable
-@inject MenuClient Menu
-@inject SystemStatusService Status
-@inject IShoppingSchedule Shopping
-@inject DragController Drag
+@inherits MenuViewBase
 @inject UiInterop Ui
-@inject IStringLocalizer<Strings> L
 
 @*
     Titles only, grouped month then week.
@@ -27,36 +22,41 @@
     <span class="week-bar__range">@_start.ToString("MMMM yyyy")</span>
     <span class="week-bar__spacer"></span>
 
-    @if (_showAllSlots || SlotVisibility.HasHidden(_allSlots, _range?.Days ?? [], _showAllSlots))
+    @if (ShowAllSlots || SlotVisibility.HasHidden(AllSlots, Range?.Days ?? [], ShowAllSlots))
     {
-        <button type="button" class="week-bar__button @(_showAllSlots ? "is-on" : null)"
-                @onclick="() => _showAllSlots = !_showAllSlots">
-            @(_showAllSlots ? L["Slots_Fewer"] : L["Slots_All"])
+        <button type="button" class="week-bar__button @(ShowAllSlots ? "is-on" : null)"
+                @onclick="() => ShowAllSlots = !ShowAllSlots">
+            @(ShowAllSlots ? L["Slots_Fewer"] : L["Slots_All"])
         </button>
     }
 
-    @if (_loading)
-    {
-        <span class="loading">@L["Loading"]</span>
-    }
+    <MenuTools Loading="Loading"
+               OnRefresh="RefreshAsync"
+               CanEdit="CanEdit"
+               CanRequest="CanRequest"
+               Editing="Editable"
+               OnToggleEdit="ToggleEditMode"
+               RequestCount="RequestCount"
+               PanelOpen="@(Panel == RequestPanelMode.Place)"
+               OnRequests="OpenRequests" />
 </div>
 
-@if (_loadError is { Length: > 0 })
+@if (LoadError is { Length: > 0 })
 {
-    <div class="issues">@_loadError</div>
+    <div class="issues">@LoadError</div>
 }
 
-@if (_conflict)
+@if (Conflict)
 {
     <div class="issues">@L["Conflict"]</div>
 }
 
 <div class="panel">
-    @if (_range is null)
+    @if (Range is null)
     {
         <p class="loading">@L["Loading"]</p>
     }
-    else if (!_range.Days.Any(d => d.Cells.Any(c => !c.IsEmpty)))
+    else if (!Range.Days.Any(d => d.Cells.Any(c => !c.IsEmpty)))
     {
         <p class="muted">@L["List_Empty"]</p>
     }
@@ -112,11 +112,14 @@
 
                                     @if (cell is null || cell.IsEmpty)
                                     {
-                                        <button type="button" class="list-grid__add"
-                                                title="@L["Grid_Add"]"
-                                                @onclick="() => OnCreate(day.Date, slot.Key)">
-                                            <span aria-hidden="true">+</span>
-                                        </button>
+                                        @if (Editable)
+                                        {
+                                            <button type="button" class="list-grid__add"
+                                                    title="@L["Grid_Add"]"
+                                                    @onclick="() => OnCreate(day.Date, slot.Key)">
+                                                <span aria-hidden="true">+</span>
+                                            </button>
+                                        }
                                     }
                                     else
                                     {
@@ -127,11 +130,11 @@
 
                                             <button type="button" class="list-grid__entry"
                                                     title="@entry.Title"
-                                                    data-drag-date="@day.Date.ToString("yyyy-MM-dd")"
-                                                    data-drag-slot="@slot.Key"
-                                                    data-drag-index="@index"
-                                                    data-drag-title="@entry.Title"
-                                                    @onclick="() => _editing = new MenuEntryRef(day.Date, slot.Key, index, entry)">
+                                                    data-drag-date="@(Editable ? day.Date.ToString("yyyy-MM-dd") : null)"
+                                                    data-drag-slot="@(Editable ? slot.Key : null)"
+                                                    data-drag-index="@(Editable ? index : null)"
+                                                    data-drag-title="@(Editable ? entry.Title : null)"
+                                                    @onclick="() => OnEdit(new MenuEntryRef(day.Date, slot.Key, index, entry))">
                                                 @entry.Title
                                             </button>
                                         }
@@ -151,21 +154,25 @@
     }
 </div>
 
-<EntryDialog Target="@_editing"
-             Version="@_range?.Version"
+<EntryDialog Target="@Editing"
+             ReadOnly="@(!Editable)"
+             Version="@Range?.Version"
              OnSaved="OnSavedAsync"
-             OnCancelled="@(() => _editing = null)" />
+             OnCancelled="@(() => Editing = null)" />
 
-<DropChoiceDialog Request="@_pendingDrop"
+<DropChoiceDialog Request="@PendingDrop"
                   OnChosen="OnDropChoiceAsync"
-                  OnCancelled="@(() => _pendingDrop = null)" />
+                  OnCancelled="@(() => PendingDrop = null)" />
+
+<RequestPanel Mode="@Panel"
+              Requests="@(Range?.Requests ?? [])"
+              OnChanged="RefreshAsync"
+              OnClosed="@(() => Panel = RequestPanelMode.Closed)" />
 
 @code {
-    private MenuRangeResponse? _range;
-    private IReadOnlyList<SlotDefinition> _allSlots = [];
-    private List<DayMarker> _markers = [];
-    private bool _showAllSlots;
+    private DateOnly _start;
     private bool _scrollPending;
+    private readonly HashSet<DateOnly> _collapsed = [];
 
     /// <summary>
     /// One column set for every week on screen, computed across the whole month.
@@ -177,61 +184,34 @@
     /// occasional empty one.
     /// </summary>
     private IReadOnlyList<SlotDefinition> VisibleSlots =>
-        SlotVisibility.Visible(_allSlots, _range?.Days ?? [], _showAllSlots);
+        SlotVisibility.Visible(AllSlots, Range?.Days ?? [], ShowAllSlots);
 
     private IEnumerable<DayMarker> MarkersOn(DateOnly date) =>
-        _markers.Where(m => DateOnly.FromDateTime(m.At) == date);
-    private DateOnly _start;
-    private DayOfWeek _weekStart = DayOfWeek.Monday;
-    private bool _loading = true;
-    private bool _conflict;
-    private string? _loadError;
-    private DropRequest? _pendingDrop;
-    private MenuEntryRef? _editing;
-
-    private void OnCreate(DateOnly date, string slot) =>
-        _editing = new MenuEntryRef(date, slot, 0, new MenuEntry { Title = string.Empty });
-
-    private async Task OnSavedAsync()
-    {
-        _editing = null;
-        await LoadAsync();
-    }
-    private readonly HashSet<DateOnly> _collapsed = [];
+        Markers.Where(m => DateOnly.FromDateTime(m.At) == date);
 
     private static string Culture =>
         System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
 
-    private static bool IsToday(DateOnly date) => date == DateOnly.FromDateTime(DateTime.Now);
+    private static bool IsToday(DateOnly date) => date == Today;
 
-    private bool IsThisWeek(DateOnly weekStart) =>
-        weekStart == StartOfWeek(DateOnly.FromDateTime(DateTime.Now));
+    private bool IsThisWeek(DateOnly weekStart) => weekStart == StartOfWeek(Today);
+
+    /// <summary>Whole weeks around the month, so a week straddling the boundary is not shown cut in half.</summary>
+    protected override (DateOnly From, DateOnly To) CurrentSpan() =>
+        (StartOfWeek(_start), StartOfWeek(_start.AddMonths(1).AddDays(-1)).AddDays(6));
+
+    protected override void InitialiseStart() => _start = new DateOnly(Today.Year, Today.Month, 1);
 
     protected override async Task OnInitializedAsync()
     {
-        Drag.Resolve = ResolveEntry;
-        Drag.Dropped += OnDroppedAsync;
-        await Drag.AttachAsync();
-
-        var status = await Status.GetAsync();
-        _allSlots = status.Slots;
-        _weekStart = status.WeekStart;
-
-        var today = DateOnly.FromDateTime(DateTime.Now);
-        _start = new DateOnly(today.Year, today.Month, 1);
-
-        await LoadAsync();
-    }
-
-    public async ValueTask DisposeAsync()
-    {
-        Drag.Dropped -= OnDroppedAsync;
-        await ValueTask.CompletedTask;
+        await base.OnInitializedAsync();
+        ScrollToTodayIfShown();
     }
 
     /// <summary>
     /// Brings today into view once the month has rendered. A month opens at the
-    /// 1st, which is rarely where anyone wants to start reading.
+    /// 1st, which is rarely where anyone wants to start reading. Not on a
+    /// background refresh, which must leave the scroll position alone.
     /// </summary>
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -242,47 +222,13 @@
         }
     }
 
-    private async Task LoadAsync()
-    {
-        _loading = true;
-        _conflict = false;
-        _loadError = null;
+    private void ScrollToTodayIfShown() =>
+        _scrollPending = Range?.Days.Any(d => IsToday(d.Date)) == true;
 
-        // Whole weeks around the month, so a week straddling the boundary is not
-        // shown cut in half.
-        var from = StartOfWeek(_start);
-        var to = StartOfWeek(_start.AddMonths(1).AddDays(-1)).AddDays(6);
-
-        try
-        {
-            _range = await Menu.RangeAsync(from, to);
-        }
-        catch (ApiException ex)
-        {
-            // An empty week and an unreachable server look identical otherwise.
-            _loadError = L[ex.ResourceKey];
-            _range = null;
-            _loading = false;
-            return;
-        }
-
-
-        // Only scroll when the month on screen actually contains today.
-        _scrollPending = _range.Days.Any(d => IsToday(d.Date));
-
-        _markers = [];
-
-        if (await Shopping.NextTripAsync() is { } trip)
-        {
-            _markers.Add(new DayMarker(trip.Order.At, "order", $"{L["Shopping_Order"]} · {trip.Order.At:HH:mm}"));
-            _markers.Add(new DayMarker(trip.Delivery.At, "delivery", $"{L["Shopping_Delivery"]} · {trip.Delivery.At:HH:mm}"));
-        }
-
-        _loading = false;
-    }
+    private void OnCreate(DateOnly date, string slot) => OnCreate((date, slot));
 
     private IEnumerable<IGrouping<DateOnly, MenuDay>> Weeks() =>
-        (_range?.Days ?? []).GroupBy(d => StartOfWeek(d.Date));
+        (Range?.Days ?? []).GroupBy(d => StartOfWeek(d.Date));
 
     private bool IsOpen(DateOnly week) => !_collapsed.Contains(week);
 
@@ -298,73 +244,16 @@
     {
         _start = _start.AddMonths(months);
         await LoadAsync();
+        ScrollToTodayIfShown();
     }
 
     private async Task GoToTodayAsync()
     {
-        var today = DateOnly.FromDateTime(DateTime.Now);
-        _start = new DateOnly(today.Year, today.Month, 1);
+        InitialiseStart();
         await LoadAsync();
+        ScrollToTodayIfShown();
     }
-
-    private async Task OnDroppedAsync(MenuEntryRef from, DropTarget to, bool copy)
-    {
-        if (IsOccupied(to))
-        {
-            _pendingDrop = new DropRequest(from, to, copy);
-            StateHasChanged();
-            return;
-        }
-
-        await ApplyMoveAsync(from, to, copy, mode: null);
-        StateHasChanged();
-    }
-
-    /// <summary>Finds the entry a drop refers to in the data now on screen.</summary>
-    private MenuEntryRef? ResolveEntry(DateOnly date, string slot, int index)
-    {
-        var cell = _range?.Days
-            .FirstOrDefault(d => d.Date == date)?
-            .Cells.FirstOrDefault(c => string.Equals(c.Slot, slot, StringComparison.OrdinalIgnoreCase));
-
-        return cell is not null && index >= 0 && index < cell.Entries.Count
-            ? new MenuEntryRef(date, slot, index, cell.Entries[index])
-            : null;
-    }
-
-    private async Task OnDropChoiceAsync(DropMode mode)
-    {
-        if (_pendingDrop is { } pending)
-        {
-            _pendingDrop = null;
-            await ApplyMoveAsync(pending.From, pending.To, pending.Copy, mode);
-        }
-    }
-
-    private async Task ApplyMoveAsync(MenuEntryRef from, DropTarget to, bool copy, DropMode? mode)
-    {
-        var result = await Menu.MoveAsync(from, to, copy, mode, _range?.Version);
-
-        if (result.Conflict)
-        {
-            _conflict = true;
-        }
-
-        await LoadAsync();
-    }
-
-    private bool IsOccupied(DropTarget target) =>
-        _range?.Days
-            .FirstOrDefault(d => d.Date == target.Date)?
-            .Cells.FirstOrDefault(c => string.Equals(c.Slot, target.Slot, StringComparison.OrdinalIgnoreCase))
-            is { IsEmpty: false };
 
     private static string WeekLabel(IGrouping<DateOnly, MenuDay> week) =>
         $"{week.Key:d MMM} – {week.Key.AddDays(6):d MMM}";
-
-    private DateOnly StartOfWeek(DateOnly date)
-    {
-        var offset = ((int)date.DayOfWeek - (int)_weekStart + 7) % 7;
-        return date.AddDays(-offset);
-    }
 }

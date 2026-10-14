@@ -1,0 +1,468 @@
+@use "tokens" as *;
+
+// The shopping section: the week's trip beside its list on a wide screen,
+// stacked on a phone.
+.shopping {
+  display: grid;
+  gap: $space-4;
+  grid-template-columns: minmax(18rem, 24rem) minmax(0, 1fr);
+  align-items: start;
+
+  @media (max-width: $bp-tablet) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+// The trip card: title and status on one line, the two moments stacked (label
+// above its date, so a long French label never squeezes the date), and the
+// editor's actions as a row along the bottom.
+.shopping__trip-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-2;
+  margin-bottom: $space-4;
+}
+
+.shopping__badges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: $space-2;
+  font-size: 0.85rem;
+}
+
+.shopping__moments .moment {
+  padding-block: 2px;
+
+  &__text {
+    display: grid;
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  &__label {
+    min-width: 0;
+    font-size: 0.78rem;
+  }
+}
+
+.shopping__trip-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $space-2;
+  margin-top: $space-4;
+  padding-top: $space-4;
+  border-top: 1px solid var(--outline-variant);
+
+  .button { flex: 1 1 auto; }
+}
+
+// "Show done (3)": a quiet chip, tinted while done items are showing.
+.shopping__filter {
+  flex: none;
+  padding: $space-1 $space-3;
+  border: 1px solid var(--outline-variant);
+  border-radius: $radius-full;
+  background: transparent;
+  color: var(--on-surface-variant);
+  font-size: 0.8rem;
+
+  &.is-on {
+    border-color: transparent;
+    background: var(--secondary-container);
+    color: var(--on-secondary-container);
+  }
+}
+
+// The add box's suggestions: a panel under the input, grouped by week on focus,
+// a flat list of matches once something is typed.
+.suggest {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+
+  .field__input { width: 100%; }
+
+  &__panel {
+    position: absolute;
+    z-index: 30;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    max-height: min(22rem, 60vh);
+    overflow-y: auto;
+    padding: $space-1;
+    border: 1px solid var(--outline-variant);
+    border-radius: $radius-md;
+    background: var(--surface-container);
+    box-shadow: var(--shadow-2);
+  }
+
+  &__group {
+    padding: $space-2 $space-2 $space-1;
+
+    // Each week after the first opens with a rule, so the groups read as blocks.
+    & ~ & {
+      margin-top: $space-1;
+      border-top: 1px solid var(--outline-variant);
+      padding-top: $space-3;
+    }
+    color: var(--on-surface-variant);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+  }
+
+  &__option {
+    display: block;
+    width: 100%;
+    padding: $space-2;
+    border: 0;
+    border-radius: $radius-sm;
+    background: transparent;
+    color: var(--on-surface);
+    text-align: left;
+
+    &:hover,
+    &.is-active {
+      background: var(--surface-container-highest);
+    }
+  }
+
+  // Under a week heading (the on-focus view); typed matches have none and stay flush.
+  &__group ~ &__option {
+    padding-left: $space-5;
+  }
+}
+
+.shopping__channel {
+  color: var(--on-surface-variant);
+}
+
+.shopping__dates-form .field + .field {
+  margin-top: $space-3;
+}
+
+.shopping__count {
+  margin-left: $space-2;
+  color: var(--on-surface-variant);
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.shopping__add {
+  display: flex;
+  gap: $space-2;
+  margin-bottom: $space-3;
+
+  .field__input { flex: 1 1 auto; }
+}
+
+.shopping__items {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.shopping-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+  min-height: 2.75rem;
+  padding: $space-1 $space-2;
+  border-radius: $radius-sm;
+  background: var(--surface-container-low);
+
+  &__handle {
+    display: grid;
+    place-items: center;
+    width: 1.5rem;
+    height: 2rem;
+    color: var(--on-surface-variant);
+    cursor: grab;
+    // Only the handle claims the gesture; the rest of the row still scrolls.
+    touch-action: none;
+  }
+
+  &__check {
+    width: 1.15rem;
+    height: 1.15rem;
+    flex: none;
+  }
+
+  &__tick {
+    width: 1.15rem;
+    color: var(--marker-delivery);
+    font-weight: 700;
+    text-align: center;
+  }
+
+  &__title {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  &__by {
+    flex: none;
+    padding: 0 $space-2;
+    border-radius: $radius-full;
+    background: var(--surface-container-high);
+    color: var(--on-surface-variant);
+    font-size: 0.72rem;
+  }
+
+  &__remove {
+    flex: none;
+    width: 2rem;
+    height: 2rem;
+    border: 0;
+    border-radius: $radius-full;
+    background: transparent;
+    color: var(--on-surface-variant);
+    font-size: 1.1rem;
+
+    &:hover {
+      background: var(--error-container);
+      color: var(--on-error-container);
+    }
+  }
+
+  &.is-done &__title {
+    color: var(--on-surface-variant);
+    text-decoration: line-through;
+  }
+
+  // The row being dragged rides above the others; the line shows where it lands.
+  &.is-sorting {
+    z-index: 2;
+    background: var(--surface-container-high);
+    box-shadow: var(--shadow-2);
+  }
+
+  &.is-sort-before::before,
+  &.is-sort-after::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 2px;
+    border-radius: 1px;
+    background: var(--primary);
+  }
+
+  &.is-sort-before::before { top: -2px; }
+  &.is-sort-after::after { bottom: -2px; }
+}
+
+.badge--ok {
+  background: var(--marker-delivery);
+  color: var(--surface);
+}
+
+// Picture buttons: big, thumb-sized targets, since on a phone in the kitchen this
+// is the quickest way to put something on the list. The camera one is for
+// devices that have one in hand; a desktop's file picker covers the rest.
+.shopping__snap {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: $space-2;
+  margin-bottom: $space-4;
+}
+
+.snap-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: $space-2;
+  min-height: 3.5rem;
+  padding: $space-2 $space-4;
+  border: 1px dashed var(--outline);
+  border-radius: $radius-md;
+  background: var(--surface-container-low);
+  color: var(--on-surface);
+  font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+
+  &:hover { background: var(--surface-container); }
+
+  &:focus-within {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+  }
+
+  &--camera {
+    border-style: solid;
+    border-color: transparent;
+    background: var(--primary-container);
+    color: var(--on-primary-container);
+
+    &:hover { background: var(--primary-container); filter: brightness(1.08); }
+  }
+
+  &.is-busy {
+    opacity: 0.6;
+    cursor: progress;
+  }
+
+  @media (max-width: $bp-tablet) {
+    min-height: 4.25rem;
+    font-size: 1.05rem;
+  }
+
+  // A mouse and no touch: a desktop, where "take a photo" would only open
+  // the file picker a second time.
+  @media (hover: hover) and (pointer: fine) {
+    &--camera { display: none; }
+  }
+}
+
+// The thumbnail: big enough to tell one yoghurt from another at a glance.
+.shopping-item__photo {
+  flex: none;
+  width: 4.5rem;
+  height: 4.5rem;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: $radius-sm;
+  background: var(--surface-container-high);
+  cursor: zoom-in;
+
+  img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  img.is-broken { visibility: hidden; }
+}
+
+.shopping-item:has(.shopping-item__photo) { padding-block: $space-2; }
+
+.shopping-item__status { margin-left: $space-2; vertical-align: middle; }
+
+.shopping-item.is-not-found .shopping-item__status {
+  background: var(--tertiary-container);
+  color: var(--on-tertiary-container);
+}
+
+.shopping-item.is-refused .shopping-item__status {
+  background: var(--error-container);
+  color: var(--on-error-container);
+}
+
+// Only bought is struck through; not found and refused say so in their badge.
+.shopping-item.is-not-found .shopping-item__title,
+.shopping-item.is-refused .shopping-item__title {
+  text-decoration: none;
+}
+
+.shopping-item__menu-anchor {
+  position: relative;
+  flex: none;
+}
+
+.shopping-item__more {
+  display: grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border: 0;
+  border-radius: $radius-full;
+  background: transparent;
+  color: var(--on-surface-variant);
+
+  &:hover,
+  &[aria-expanded="true"] { background: var(--surface-container-high); }
+}
+
+.item-menu {
+  position: absolute;
+  z-index: 31;
+  top: calc(100% + 4px);
+  right: 0;
+  display: grid;
+  min-width: 14rem;
+  padding: $space-1;
+  border: 1px solid var(--outline-variant);
+  border-radius: $radius-md;
+  background: var(--surface-container);
+  box-shadow: var(--shadow-2);
+
+  button {
+    padding: $space-3;
+    border: 0;
+    border-radius: $radius-sm;
+    background: transparent;
+    color: var(--on-surface);
+    text-align: left;
+
+    &:hover { background: var(--surface-container-highest); }
+  }
+
+  &__danger { color: var(--error) !important; }
+
+  // A click anywhere else closes the menu.
+  &__scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 30;
+  }
+}
+
+.suggest__option {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+}
+
+.suggest__thumb {
+  flex: none;
+  width: 2rem;
+  height: 2rem;
+  border-radius: $radius-sm;
+  object-fit: cover;
+}
+
+// Full screen: the picture as large as it fits, a tap anywhere closes it.
+.lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: $space-4;
+  background: rgb(0 0 0 / 0.88);
+  cursor: zoom-out;
+  outline: none;
+
+  &__img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    border-radius: $radius-sm;
+  }
+
+  &__close {
+    position: absolute;
+    top: $space-3;
+    right: $space-3;
+    width: 2.75rem;
+    height: 2.75rem;
+    border: 0;
+    border-radius: $radius-full;
+    background: rgb(255 255 255 / 0.15);
+    color: #fff;
+    font-size: 1.6rem;
+  }
+}

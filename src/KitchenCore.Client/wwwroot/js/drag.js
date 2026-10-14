@@ -36,7 +36,22 @@ export function init(dotnetRef) {
     document.addEventListener('pointerup', onPointerUp, true);
     document.addEventListener('pointercancel', cancel, true);
     document.addEventListener('click', onClick, true);
+    document.addEventListener('keydown', onModifier, true);
+    document.addEventListener('keyup', onModifier, true);
     attached = true;
+}
+
+// Holding Ctrl (Cmd on a Mac) turns the drag into a copy, the way it does in a
+// file manager. Pressing or releasing it mid-drag must show at once, without
+// waiting for the pointer to move, or the ghost lies about what the drop will do.
+function onModifier(event) {
+    if (!state?.dragging || (event.key !== 'Control' && event.key !== 'Meta')) {
+        return;
+    }
+
+    state.copy = state.source.requestOrdinal === null && (event.ctrlKey || event.metaKey);
+    ghost?.classList.toggle('is-copy', state.copy);
+    document.body.classList.toggle('is-copying', state.copy);
 }
 
 export function dispose() {
@@ -45,6 +60,8 @@ export function dispose() {
     document.removeEventListener('pointerup', onPointerUp, true);
     document.removeEventListener('pointercancel', cancel, true);
     document.removeEventListener('click', onClick, true);
+    document.removeEventListener('keydown', onModifier, true);
+    document.removeEventListener('keyup', onModifier, true);
     attached = false;
     dotnet = null;
     cancel();
@@ -71,6 +88,7 @@ function onPointerDown(event) {
         startX: event.clientX,
         startY: event.clientY,
         dragging: false,
+        copy: event.ctrlKey || event.metaKey,
         timer: null,
         source: {
             date: handle.dataset.dragDate ?? null,
@@ -123,7 +141,9 @@ function onPointerMove(event) {
     }
 
     event.preventDefault();
-    moveGhost(event.clientX, event.clientY, event.ctrlKey || event.metaKey);
+    state.copy = state.source.requestOrdinal === null && (event.ctrlKey || event.metaKey);
+    moveGhost(event.clientX, event.clientY, state.copy);
+    document.body.classList.toggle('is-copying', state.copy);
     highlight(targetAt(event.clientX, event.clientY));
 }
 
@@ -147,7 +167,8 @@ function onPointerUp(event) {
     // Only a real drag swallows the click; a plain tap must still open the entry.
     suppressClick = was.dragging;
     const target = was.dragging ? targetAt(event.clientX, event.clientY) : null;
-    const copy = event.ctrlKey || event.metaKey;
+    // A request is always taken off the list, never copied out of it.
+    const copy = was.source.requestOrdinal === null && (event.ctrlKey || event.metaKey || was.copy);
 
     cancel();
 
@@ -183,8 +204,16 @@ function begin(x, y) {
     clearTimeout(state.timer);
     state.dragging = true;
     document.body.classList.add('is-dragging');
+
+    // A request is dragged out of the sidebar, which sits over the grid. The
+    // stylesheet fades it and its scrim out of the way, so the days underneath
+    // can be seen and -- more to the point -- hit-tested as drop targets.
+    if (state.source.requestOrdinal !== null) {
+        document.body.classList.add('is-dragging-request');
+        state.copy = false;
+    }
     showGhost(state.source.title);
-    moveGhost(x, y, false);
+    moveGhost(x, y, state.copy);
 }
 
 function cancel() {
@@ -200,7 +229,7 @@ function cancel() {
         }
     }
 
-    document.body.classList.remove('is-dragging');
+    document.body.classList.remove('is-dragging', 'is-dragging-request', 'is-copying');
     clearHighlight();
     hideGhost();
     state = null;

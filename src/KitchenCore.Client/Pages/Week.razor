@@ -1,12 +1,6 @@
 @page "/menu/week"
-@implements IAsyncDisposable
-@inject DragController Drag
+@inherits MenuViewBase
 @inject UiInterop Ui
-@inject MenuClient Menu
-@inject SystemStatusService Status
-@inject AuthService Auth
-@inject IShoppingSchedule Shopping
-@inject IStringLocalizer<Strings> L
 
 <PageTitle>@L["Week_Title"] · @L["AppName"]</PageTitle>
 
@@ -21,62 +15,45 @@
     @* Snack and special are hidden while the week has none: two of four rows
        standing empty is a poor use of the screen. The toggle brings them back,
        and a week that already uses them shows them regardless. *@
-    @if (_showAllSlots || SlotVisibility.HasHidden(_allSlots, _range?.Days ?? [], _showAllSlots))
+    @if (ShowAllSlots || SlotVisibility.HasHidden(AllSlots, Range?.Days ?? [], ShowAllSlots))
     {
-        <button type="button" class="week-bar__button @(_showAllSlots ? "is-on" : null)"
-                @onclick="() => _showAllSlots = !_showAllSlots">
-            @(_showAllSlots ? L["Slots_Fewer"] : L["Slots_All"])
+        <button type="button" class="week-bar__button @(ShowAllSlots ? "is-on" : null)"
+                @onclick="() => ShowAllSlots = !ShowAllSlots">
+            @(ShowAllSlots ? L["Slots_Fewer"] : L["Slots_All"])
         </button>
     }
 
     @* Requests live here rather than beside the calendar: a panel open all the
        time costs the grid width it needs more. *@
-    @if (CanEdit)
-    {
-        <button type="button" class="week-bar__button @(_panel == RequestPanelMode.Place ? "is-on" : null)"
-                @onclick="TogglePlace">
-            @L["Requests_Title"]
-            @if (RequestCount > 0)
-            {
-                <span class="week-bar__count">@RequestCount</span>
-            }
-        </button>
-    }
-    else if (CanRequest)
-    {
-        <button type="button" class="week-bar__button" @onclick="() => _panel = RequestPanelMode.Ask">
-            @L["Requests_Ask"]
-            @if (RequestCount > 0)
-            {
-                <span class="week-bar__count">@RequestCount</span>
-            }
-        </button>
-    }
-
-    @if (_loading)
-    {
-        <span class="loading">@L["Loading"]</span>
-    }
+    <MenuTools Loading="Loading"
+               OnRefresh="RefreshAsync"
+               CanEdit="CanEdit"
+               CanRequest="CanRequest"
+               Editing="Editable"
+               OnToggleEdit="ToggleEditMode"
+               RequestCount="RequestCount"
+               PanelOpen="@(Panel == RequestPanelMode.Place)"
+               OnRequests="OpenRequests" />
 </div>
 
-@if (_loadError is { Length: > 0 })
+@if (LoadError is { Length: > 0 })
 {
-    <div class="issues">@_loadError</div>
+    <div class="issues">@LoadError</div>
 }
 
-@if (_conflict)
+@if (Conflict)
 {
     <div class="issues">@L["Conflict"]</div>
 }
 
-@if (_range is { Issues.Count: > 0 })
+@if (Range is { Issues.Count: > 0 })
 {
     @* Problems in the files are surfaced, never thrown: a hand-edited menu that
        cannot be parsed must still leave the rest of the week usable. *@
     <div class="issues">
         <strong>@L["Issues_Title"]</strong>
         <ul>
-            @foreach (var issue in _range.Issues)
+            @foreach (var issue in Range.Issues)
             {
                 <li>@issue.Message</li>
             }
@@ -85,120 +62,65 @@
 }
 
 <div class="menu-grid-scroll">
-    <MenuGrid Days="@(_range?.Days ?? [])"
+    <MenuGrid Days="@(Range?.Days ?? [])"
               Slots="@VisibleSlots"
-              Markers="@_markers"
+              Markers="@Markers"
+              Editable="Editable"
               OnCreate="OnCreate"
               OnEdit="OnEdit"
-              OnMoveMenu="@(e => _moving = e)" />
+              OnMoveMenu="OnMoveMenu" />
 </div>
 
-<EntryDialog Target="@_editing"
-             Version="@_range?.Version"
+<EntryDialog Target="@Editing"
+             ReadOnly="@(!Editable)"
+             Version="@Range?.Version"
              OnSaved="OnSavedAsync"
-             OnCancelled="@(() => _editing = null)" />
+             OnCancelled="@(() => Editing = null)" />
 
-<DropChoiceDialog Request="@_pendingDrop"
+<DropChoiceDialog Request="@PendingDrop"
                   OnChosen="OnDropChoiceAsync"
-                  OnCancelled="@(() => _pendingDrop = null)" />
+                  OnCancelled="@(() => PendingDrop = null)" />
 
-<MoveToDialog Entry="@_moving"
+<MoveToDialog Entry="@Moving"
               OnConfirmed="OnMoveConfirmedAsync"
-              OnCancelled="@(() => _moving = null)" />
+              OnCancelled="@(() => Moving = null)" />
 
-<RequestPanel Mode="@_panel"
-              Requests="@(_range?.Requests ?? [])"
-              OnChanged="LoadAsync"
-              OnClosed="@(() => _panel = RequestPanelMode.Closed)" />
+<RequestPanel Mode="@Panel"
+              Requests="@(Range?.Requests ?? [])"
+              OnChanged="RefreshAsync"
+              OnClosed="@(() => Panel = RequestPanelMode.Closed)" />
 
 @code {
-    private MenuRangeResponse? _range;
-    private IReadOnlyList<SlotDefinition> _allSlots = [];
-    private List<DayMarker> _markers = [];
     private DateOnly _start;
-    private bool _loading = true;
-    private bool _conflict;
-    private string? _loadError;
-    private bool _showAllSlots;
-    private MenuEntryRef? _editing;
-    private MenuEntryRef? _moving;
-    private DropRequest? _pendingDrop;
-    private RequestPanelMode _panel = RequestPanelMode.Closed;
     private bool _scrollPending;
 
-    private bool CanEdit => Auth.Identity.CanEdit(Section.Menu);
-
-    private bool CanRequest => Auth.Identity.CanRequest(Section.Menu);
-
-    private int RequestCount => _range?.Requests.Count ?? 0;
-
     private IReadOnlyList<SlotDefinition> VisibleSlots =>
-        SlotVisibility.Visible(_allSlots, _range?.Days ?? [], _showAllSlots);
+        SlotVisibility.Visible(AllSlots, Range?.Days ?? [], ShowAllSlots);
 
-    protected override async Task OnInitializedAsync()
-    {
-        // One drag listener for the page; drops resolve against whatever is
-        // currently loaded rather than anything carried through JavaScript.
-        Drag.Resolve = ResolveEntry;
-        Drag.Dropped += OnDroppedAsync;
-        Drag.RequestDropped += OnRequestDroppedAsync;
-        await Drag.AttachAsync();
+    protected override (DateOnly From, DateOnly To) CurrentSpan() => (_start, _start.AddDays(6));
 
-        var status = await Status.GetAsync();
-        _allSlots = status.Slots;
-        _start = StartOfWeek(DateOnly.FromDateTime(DateTime.Now), status.WeekStart);
-
-        await LoadAsync();
-    }
-
-    private async Task LoadAsync()
-    {
-        _loading = true;
-        _conflict = false;
-        _loadError = null;
-
-        try
-        {
-            _range = await Menu.RangeAsync(_start, _start.AddDays(6));
-        }
-        catch (ApiException ex)
-        {
-            // An empty week and an unreachable server look identical otherwise.
-            _loadError = L[ex.ResourceKey];
-            _range = null;
-            _loading = false;
-            return;
-        }
-
-
-        // Markers come from the shopping schedule, not the menu files: they are
-        // moments in the day rather than meals.
-        _markers = [];
-
-        if (await Shopping.NextTripAsync() is { } trip)
-        {
-            _markers.Add(new DayMarker(trip.Order.At, "order", $"{L["Shopping_Order"]} · {trip.Order.At:HH:mm}"));
-            _markers.Add(new DayMarker(trip.Delivery.At, "delivery", $"{L["Shopping_Delivery"]} · {trip.Delivery.At:HH:mm}"));
-        }
-
-        // The phone strip opens on Monday, which on a Friday means swiping past
-        // four days already eaten.
-        _scrollPending = _range.Days.Any(d => d.Date == DateOnly.FromDateTime(DateTime.Now));
-
-        _loading = false;
-    }
+    protected override void InitialiseStart() => _start = StartOfWeek(Today);
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (_scrollPending)
         {
             _scrollPending = false;
-            await Ui.ScrollDayIntoViewAsync(DateOnly.FromDateTime(DateTime.Now));
+            await Ui.ScrollDayIntoViewAsync(Today);
         }
     }
 
-    private void TogglePlace() =>
-        _panel = _panel == RequestPanelMode.Place ? RequestPanelMode.Closed : RequestPanelMode.Place;
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+        ScrollToTodayIfShown();
+    }
+
+    // The phone strip opens on Monday, which on a Friday means swiping past
+    // four days already eaten. Only on arriving at the week, though: a
+    // background refresh yanking the strip back to today would be maddening.
+    private void ScrollToTodayIfShown() =>
+        _scrollPending = Range?.Days.Any(d => d.Date == Today) == true;
 
     private async Task ShiftAsync(int days)
     {
@@ -208,110 +130,10 @@
 
     private async Task GoToTodayAsync()
     {
-        _start = StartOfWeek(DateOnly.FromDateTime(DateTime.Now), (await Status.GetAsync()).WeekStart);
+        _start = StartOfWeek(Today);
         await LoadAsync();
+        ScrollToTodayIfShown();
     }
-
-    private void OnCreate((DateOnly Date, string Slot) target) =>
-        // Index 0 on an empty cell: the store appends when the index is past the end.
-        _editing = new MenuEntryRef(target.Date, target.Slot, 0, new MenuEntry { Title = string.Empty });
-
-    private void OnEdit(MenuEntryRef entry) => _editing = entry;
-
-    /// <summary>
-    /// A drop landed. If the target is free this just moves; if it is taken the
-    /// user is asked first, because there is no silent overwrite here.
-    /// </summary>
-    private async Task OnDroppedAsync(MenuEntryRef from, DropTarget to, bool copy)
-    {
-        if (IsOccupied(to))
-        {
-            _pendingDrop = new DropRequest(from, to, copy);
-            StateHasChanged();
-            return;
-        }
-
-        await ApplyMoveAsync(from, to, copy, mode: null);
-        StateHasChanged();
-    }
-
-    /// <summary>A request dragged onto a day becomes an entry, still marked as requested.</summary>
-    private async Task OnRequestDroppedAsync(int ordinal, string title, DropTarget to)
-    {
-        var request = _range?.Requests.FirstOrDefault(r => r.Ordinal == ordinal && r.Title == title);
-
-        if (request is not null)
-        {
-            await Menu.ScheduleRequestAsync(request, to.Date, to.Slot);
-            await LoadAsync();
-            StateHasChanged();
-        }
-    }
-
-    private async Task OnDropChoiceAsync(DropMode mode)
-    {
-        if (_pendingDrop is { } pending)
-        {
-            _pendingDrop = null;
-            await ApplyMoveAsync(pending.From, pending.To, pending.Copy, mode);
-        }
-    }
-
-    private async Task OnMoveConfirmedAsync((DropTarget To, bool Copy) move)
-    {
-        if (_moving is not { } entry)
-        {
-            return;
-        }
-
-        _moving = null;
-
-        // Same path as a drag, so the fallback cannot drift from the gesture.
-        if (IsOccupied(move.To))
-        {
-            _pendingDrop = new DropRequest(entry, move.To, move.Copy);
-            return;
-        }
-
-        await ApplyMoveAsync(entry, move.To, move.Copy, mode: null);
-    }
-
-    private async Task ApplyMoveAsync(MenuEntryRef from, DropTarget to, bool copy, DropMode? mode)
-    {
-        var result = await Menu.MoveAsync(from, to, copy, mode, _range?.Version);
-
-        if (result.Conflict)
-        {
-            _conflict = true;
-        }
-
-        await LoadAsync();
-    }
-
-    private async Task OnSavedAsync()
-    {
-        _editing = null;
-        await LoadAsync();
-    }
-
-    /// <summary>Finds the entry a drop refers to in the data now on screen.</summary>
-    private MenuEntryRef? ResolveEntry(DateOnly date, string slot, int index)
-    {
-        var cell = _range?.Days
-            .FirstOrDefault(d => d.Date == date)?
-            .Cells.FirstOrDefault(c => string.Equals(c.Slot, slot, StringComparison.OrdinalIgnoreCase));
-
-        return cell is not null && index >= 0 && index < cell.Entries.Count
-            ? new MenuEntryRef(date, slot, index, cell.Entries[index])
-            : null;
-    }
-
-    /// <summary>Whether the target already holds something, which is what makes a drop a question.</summary>
-    private bool IsOccupied(DropTarget target) =>
-        _range?.Days
-            .FirstOrDefault(d => d.Date == target.Date)?
-            .Cells.FirstOrDefault(c => string.Equals(c.Slot, target.Slot, StringComparison.OrdinalIgnoreCase))
-            is { IsEmpty: false };
 
     private string RangeLabel()
     {
@@ -326,19 +148,5 @@
         return _start.Year == end.Year
             ? $"{_start:d MMM} – {end:d MMM yyyy}"
             : $"{_start:d MMM yyyy} – {end:d MMM yyyy}";
-    }
-
-    /// <summary>Rolls a date back to the configured first day of the week.</summary>
-    private static DateOnly StartOfWeek(DateOnly date, DayOfWeek weekStart)
-    {
-        var offset = ((int)date.DayOfWeek - (int)weekStart + 7) % 7;
-        return date.AddDays(-offset);
-    }
-
-    public async ValueTask DisposeAsync()
-    {
-        Drag.Dropped -= OnDroppedAsync;
-        Drag.RequestDropped -= OnRequestDroppedAsync;
-        await ValueTask.CompletedTask;
     }
 }

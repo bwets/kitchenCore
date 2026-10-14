@@ -124,10 +124,12 @@ public static class MenuEndpoints
         // Undated requests: "someone would like lasagne, no particular day".
         var backlog = app.MapGroup("/api/menu/requests");
 
-        backlog.MapGet("/", (RequestStore store) => Results.Ok(store.List()));
+        backlog.MapGet("/", (RequestStore store) => Results.Ok(store.List()))
+            .RequireRole(Section.Menu, SectionRole.Viewer);
 
         backlog.MapPost("/", async (
             RequestStore store,
+            GitSyncService sync,
             DeviceContext devices,
             NewRequest request,
             CancellationToken cancellationToken) =>
@@ -139,13 +141,18 @@ public static class MenuEndpoints
 
             // Attributed to the device that asked, so an editor knows who wants it.
             await store.AddAsync(request.Title, request.Notes, devices.Current.Name, cancellationToken);
+            Attribute(true, sync, devices);
             return Results.Ok();
         }).RequireRole(Section.Menu, SectionRole.Requestor);
 
         // Scheduling a request turns it into a real entry and removes it here.
+        // An occupied slot is answered the same way as any drop -- insert, shift
+        // right or overwrite -- and without an answer the request stays put.
         backlog.MapPost("/schedule", async (
             RequestStore store,
             MenuStore menu,
+            GitSyncService sync,
+            DeviceContext devices,
             ScheduleRequest request,
             HttpContext http) =>
         {
@@ -156,9 +163,7 @@ public static class MenuEndpoints
                 return Results.NotFound(new { error = "That request is no longer there." });
             }
 
-            var result = await menu.UpsertAsync(
-                request.Date,
-                request.Slot,
+            var result = await menu.PlaceAsync(
                 new MenuEntry
                 {
                     Title = taken.Title,
@@ -166,22 +171,51 @@ public static class MenuEndpoints
                     RequestedBy = taken.By,
                     Status = EntryStatus.Requested,
                 },
-                entryIndex: int.MaxValue,
-                cancellationToken: http.RequestAborted);
+                request.Date,
+                request.Slot,
+                request.Mode,
+                IfMatch(http),
+                http.RequestAborted);
 
-            return result.Success
-                ? Results.Ok(new { version = result.Version })
-                : Results.BadRequest(new { error = result.Error });
+            if (!result.Success)
+            {
+                // Taken first so two editors cannot both schedule it; put back if
+                // the menu write did not happen, so nobody's request is lost.
+                await store.RestoreAsync(request.Ordinal, taken, CancellationToken.None);
+
+                return result.Conflict
+                    ? Results.Problem(
+                        title: "The menu changed since you loaded it.",
+                        detail: result.Error,
+                        statusCode: StatusCodes.Status412PreconditionFailed)
+                    : Results.BadRequest(new { error = result.Error });
+            }
+
+            Attribute(true, sync, devices);
+            return Results.Ok(new { version = result.Version, steps = result.Steps });
         }).RequireRole(Section.Menu, SectionRole.Editor);
+
+        // What a shift-right would cascade if a request landed here.
+        backlog.MapPost("/schedule/preview", (MenuStore menu, ScheduleRequest request) =>
+            Results.Ok(menu.PreviewPlace(request.Date, request.Slot)))
+            .RequireRole(Section.Menu, SectionRole.Editor);
 
         backlog.MapDelete("/{ordinal:int}", async (
             RequestStore store,
+            GitSyncService sync,
+            DeviceContext devices,
             int ordinal,
             string title,
             CancellationToken cancellationToken) =>
-            await store.TakeAsync(ordinal, title, cancellationToken) is not null
-                ? Results.Ok()
-                : Results.NotFound()).RequireRole(Section.Menu, SectionRole.Editor);
+        {
+            if (await store.TakeAsync(ordinal, title, cancellationToken) is null)
+            {
+                return Results.NotFound();
+            }
+
+            Attribute(true, sync, devices);
+            return Results.Ok();
+        }).RequireRole(Section.Menu, SectionRole.Editor);
 
         return app;
     }
@@ -252,4 +286,7 @@ public sealed record ScheduleRequest
     public required DateOnly Date { get; init; }
 
     public required string Slot { get; init; }
+
+    /// <summary>The answer to "that slot is taken"; required only when it is.</summary>
+    public DropMode? Mode { get; init; }
 }

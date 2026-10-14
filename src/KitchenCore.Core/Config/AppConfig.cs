@@ -28,6 +28,32 @@ public sealed class GitConfig
     public string CommitterEmail { get; set; } = "kitchencore@local";
 }
 
+/// <summary>A weekday and a time: "tuesday 20:00".</summary>
+public sealed class WeeklyMoment
+{
+    public DayOfWeek Day { get; set; }
+
+    /// <summary>"HH:mm". A string so the YAML reads as a person would write it.</summary>
+    public string Time { get; set; } = "00:00";
+
+    public TimeOnly TimeOfDay =>
+        TimeOnly.TryParse(Time, System.Globalization.CultureInfo.InvariantCulture, out var time) ? time : TimeOnly.MinValue;
+}
+
+/// <summary>
+/// The usual shopping rhythm. Only the starting point: once a week's dates are
+/// edited, the weeks after it follow that week instead, until edited again.
+/// </summary>
+public sealed class ShoppingConfig
+{
+    public WeeklyMoment Order { get; set; } = new() { Day = DayOfWeek.Tuesday, Time = "20:00" };
+
+    public WeeklyMoment Delivery { get; set; } = new() { Day = DayOfWeek.Thursday, Time = "15:00" };
+
+    /// <summary>Shown under the trip: "Drive", "Livraison"... Optional.</summary>
+    public string? Channel { get; set; }
+}
+
 /// <summary>Contents of config/app.yaml.</summary>
 public sealed class AppConfig
 {
@@ -39,6 +65,8 @@ public sealed class AppConfig
     public List<SlotDefinition> Slots { get; set; } = [];
 
     public GitConfig Git { get; set; } = new();
+
+    public ShoppingConfig Shopping { get; set; } = new();
 
     /// <summary>
     /// One-time code that promotes the first device presenting it to admin.
