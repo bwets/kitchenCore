@@ -1,6 +1,12 @@
 # syntax=docker/dockerfile:1
 
-FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+# The build stage runs on the builder's own platform, never emulated. The publish
+# is framework-dependent with no runtime identifier, so its output is portable IL,
+# identical for amd64 and arm64: BuildKit builds it once and copies it into both
+# runtime images. Without --platform, the arm64 build ran the whole SDK under
+# QEMU and took ~6 minutes of a release. Add a -r to the publish and this needs
+# -a $TARGETARCH as well.
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
 # Restore against the project files alone, so a source-only change does not
