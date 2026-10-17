@@ -188,6 +188,9 @@
   <data name="Shopping_Uploading" xml:space="preserve"><value>Envoi…</value></data>
   <data name="Shopping_UploadFailed" xml:space="preserve"><value>L'image n'a pas pu être ajoutée.</value></data>
   <data name="Shopping_ShowPhoto" xml:space="preserve"><value>Voir l'image</value></data>
+  <data name="Shopping_ZoomIn" xml:space="preserve"><value>Agrandir</value></data>
+  <data name="Shopping_ZoomOut" xml:space="preserve"><value>Réduire</value></data>
+  <data name="Shopping_ZoomFit" xml:space="preserve"><value>Ajuster à l'écran</value></data>
   <data name="Shopping_More" xml:space="preserve"><value>Plus</value></data>
   <data name="Shopping_MarkNotFound" xml:space="preserve"><value>Introuvable</value></data>
   <data name="Shopping_MarkRefused" xml:space="preserve"><value>Refuser</value></data>

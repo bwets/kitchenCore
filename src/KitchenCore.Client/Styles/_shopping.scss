@@ -434,29 +434,67 @@
   object-fit: cover;
 }
 
-// Full screen: the picture as large as it fits, a tap anywhere closes it.
+// Full screen: the picture opens fitted to the screen, then zooms and pans
+// (js/zoom.js, which sizes the picture). A tap beside the picture closes it.
 .lightbox {
   position: fixed;
   inset: 0;
   z-index: 60;
-  display: grid;
-  place-items: center;
-  padding: $space-4;
   background: rgb(0 0 0 / 0.88);
-  cursor: zoom-out;
   outline: none;
 
-  &__img {
-    max-width: 100%;
-    max-height: 100%;
-    object-fit: contain;
-    border-radius: $radius-sm;
+  // An ordinary scrolling box: zooming only resizes the picture, so panning is
+  // scrolling. The picture's auto margins centre it while it is smaller than
+  // the box and, unlike justify-content, still let every edge scroll into view
+  // once it is larger. The bottom padding keeps the fitted picture clear of the
+  // toolbar.
+  &__stage {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    overflow: auto;
+    overscroll-behavior: contain;
+    padding: max($space-4, env(safe-area-inset-top)) max($space-4, env(safe-area-inset-right))
+      calc(4.5rem + env(safe-area-inset-bottom)) max($space-4, env(safe-area-inset-left));
+    touch-action: none;
+    cursor: zoom-out;
   }
 
-  &__close {
+  &__img {
+    flex: none;
+    margin: auto;
+    max-width: none;
+    border-radius: $radius-sm;
+    cursor: zoom-in;
+    user-select: none;
+    -webkit-user-drag: none;
+    // Hidden until zoom.js has sized it, so it never flashes at full size.
+    visibility: hidden;
+
+    &.is-ready {
+      visibility: visible;
+    }
+  }
+
+  &__stage.is-zoomed &__img {
+    cursor: grab;
+  }
+
+  &__tools {
     position: absolute;
-    top: $space-3;
-    right: $space-3;
+    left: 50%;
+    bottom: calc($space-3 + env(safe-area-inset-bottom));
+    transform: translateX(-50%);
+    display: flex;
+    gap: $space-2;
+    padding: $space-1;
+    border-radius: $radius-full;
+    background: rgb(0 0 0 / 0.55);
+  }
+
+  &__tool {
+    display: grid;
+    place-items: center;
     width: 2.75rem;
     height: 2.75rem;
     border: 0;
@@ -464,5 +502,7 @@
     background: rgb(255 255 255 / 0.15);
     color: #fff;
     font-size: 1.6rem;
+    line-height: 1;
+    cursor: pointer;
   }
 }

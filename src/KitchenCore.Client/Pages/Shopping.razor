@@ -348,8 +348,22 @@
     {
         <div class="lightbox" role="dialog" aria-modal="true" tabindex="-1" @ref="_lightboxRef"
              @onclick="() => _lightbox = null" @onkeydown="OnLightboxKey">
-            <ShoppingPhoto Path="@full" Class="lightbox__img" />
-            <button type="button" class="lightbox__close" aria-label="@L["Close"]">×</button>
+            <div class="lightbox__stage" data-zoom-stage @ref="_lightboxStage">
+                <ShoppingPhoto Path="@full" Class="lightbox__img" />
+            </div>
+            @* js/zoom.js handles the zoom buttons and stops their clicks; the close
+               button's click bubbles up to the dialog and closes it. *@
+            <div class="lightbox__tools">
+                <button type="button" class="lightbox__tool" data-zoom="out" aria-label="@L["Shopping_ZoomOut"]">−</button>
+                <button type="button" class="lightbox__tool" data-zoom="fit" aria-label="@L["Shopping_ZoomFit"]">
+                    <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none"
+                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />
+                    </svg>
+                </button>
+                <button type="button" class="lightbox__tool" data-zoom="in" aria-label="@L["Shopping_ZoomIn"]">+</button>
+                <button type="button" class="lightbox__tool" aria-label="@L["Close"]">×</button>
+            </div>
         </div>
     }
 }
@@ -398,7 +412,9 @@ else if (_loading)
     private bool _uploading;
     private string? _lightbox;
     private ElementReference _lightboxRef;
+    private ElementReference _lightboxStage;
     private bool _lightboxFocused;
+    private IJSObjectReference? _zoom;
 
     // The item whose action menu is open, by the same (ordinal, title) pair that addresses it.
     private (int Ordinal, string Title)? _menuFor;
@@ -434,15 +450,22 @@ else if (_loading)
             await _sortable.InvokeVoidAsync("attach", _sortId, _list, _self);
         }
 
-        // Focused once it opens, so Escape reaches it.
+        // Focused once it opens, so Escape reaches it, and handed to js/zoom.js.
         if (_lightbox is not null && !_lightboxFocused)
         {
             _lightboxFocused = true;
             await _lightboxRef.FocusAsync();
+            _zoom ??= await JS.InvokeAsync<IJSObjectReference>("import", "./js/zoom.js");
+            await _zoom.InvokeVoidAsync("attach", _lightboxStage);
         }
-        else if (_lightbox is null)
+        else if (_lightbox is null && _lightboxFocused)
         {
             _lightboxFocused = false;
+
+            if (_zoom is not null)
+            {
+                await _zoom.InvokeVoidAsync("detach");
+            }
         }
     }
 
@@ -836,6 +859,19 @@ else if (_loading)
             {
                 await _sortable.InvokeVoidAsync("detach", _sortId);
                 await _sortable.DisposeAsync();
+            }
+            catch (Exception ex) when (ex is JSException or JSDisconnectedException)
+            {
+                // The page is going away.
+            }
+        }
+
+        if (_zoom is not null)
+        {
+            try
+            {
+                await _zoom.InvokeVoidAsync("detach");
+                await _zoom.DisposeAsync();
             }
             catch (Exception ex) when (ex is JSException or JSDisconnectedException)
             {

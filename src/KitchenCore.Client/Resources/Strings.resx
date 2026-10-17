@@ -188,6 +188,9 @@
   <data name="Shopping_Uploading" xml:space="preserve"><value>Sending…</value></data>
   <data name="Shopping_UploadFailed" xml:space="preserve"><value>The picture could not be added.</value></data>
   <data name="Shopping_ShowPhoto" xml:space="preserve"><value>Show the picture</value></data>
+  <data name="Shopping_ZoomIn" xml:space="preserve"><value>Zoom in</value></data>
+  <data name="Shopping_ZoomOut" xml:space="preserve"><value>Zoom out</value></data>
+  <data name="Shopping_ZoomFit" xml:space="preserve"><value>Fit to the screen</value></data>
   <data name="Shopping_More" xml:space="preserve"><value>More</value></data>
   <data name="Shopping_MarkNotFound" xml:space="preserve"><value>Not found</value></data>
   <data name="Shopping_MarkRefused" xml:space="preserve"><value>Refuse</value></data>
