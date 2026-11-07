@@ -133,9 +133,12 @@
   width: min(64rem, calc(100vw - #{$space-5}));
   height: min(44rem, calc(100vh - #{$space-6}));
 
+  // The row is capped at the space there is; an auto row would grow to fit
+  // the notes, and they would spill under the buttons instead of scrolling.
   .entry-body {
     display: grid;
     grid-template-columns: minmax(14rem, 22rem) minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
     align-items: stretch;
   }
 
