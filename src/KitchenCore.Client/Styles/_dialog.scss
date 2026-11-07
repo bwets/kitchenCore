@@ -71,6 +71,89 @@
   }
 }
 
+// A menu entry's details. Laid out as a column whose only scrolling part is the
+// notes: the title, the links and the buttons always stay in view, and a long
+// recipe scrolls on its own rather than taking the save button with it.
+.dialog--entry {
+  display: flex;
+  flex-direction: column;
+  width: min(40rem, calc(100vw - #{$space-5}));
+  overflow: hidden;
+
+  .dialog__head,
+  .dialog__foot,
+  .dialog__error {
+    flex: none;
+  }
+
+  // The same bottom sheet as every dialog on a phone; this rule comes later
+  // than that one, so it has to say so again.
+  @media (max-width: $bp-tablet) {
+    width: 100%;
+  }
+}
+
+.entry-body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: $space-4;
+  min-height: 0;
+
+  &__main {
+    flex: none;
+  }
+
+  // Shrinks before anything else does, and scrolls inside itself.
+  &__notes {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0;
+
+    .field__label,
+    .field__hint {
+      flex: none;
+    }
+  }
+
+  &__scroll {
+    flex: 1 1 auto;
+    min-height: 4rem;
+    overflow-y: auto;
+  }
+
+  textarea.entry-body__scroll {
+    resize: none;
+  }
+}
+
+// With notes: wide, the fields on the left and the notes filling the right.
+.dialog--split {
+  width: min(64rem, calc(100vw - #{$space-5}));
+  height: min(44rem, calc(100vh - #{$space-6}));
+
+  .entry-body {
+    display: grid;
+    grid-template-columns: minmax(14rem, 22rem) minmax(0, 1fr);
+    align-items: stretch;
+  }
+
+  .entry-body__main {
+    min-height: 0;
+  }
+
+  // Back to one column on a phone: fields first, the notes taking what is left.
+  @media (max-width: $bp-tablet) {
+    width: 100%;
+    height: 85vh;
+
+    .entry-body {
+      display: flex;
+    }
+  }
+}
+
 .field {
   display: block;
 

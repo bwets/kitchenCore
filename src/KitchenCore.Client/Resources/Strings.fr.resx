@@ -199,5 +199,10 @@
   <data name="Shopping_NotFound" xml:space="preserve"><value>introuvable</value></data>
   <data name="Shopping_Refused" xml:space="preserve"><value>refusé</value></data>
   <data name="Shopping_Remove" xml:space="preserve"><value>Retirer</value></data>
+  <data name="Shopping_Rename" xml:space="preserve"><value>Modifier</value></data>
+  <data name="Shopping_MoveTo" xml:space="preserve"><value>Déplacer vers</value></data>
+  <data name="Shopping_Lists" xml:space="preserve"><value>Listes de courses</value></data>
+  <data name="Shopping_AdHocHint" xml:space="preserve"><value>Pas de jour fixe : acheté quand quelqu’un y passe.</value></data>
+  <data name="Shopping_ClearDone" xml:space="preserve"><value>Effacer ce qui est fait</value></data>
   <data name="Shopping_Gone" xml:space="preserve"><value>Cet article avait déjà changé ; voici la liste telle qu'elle est.</value></data>
 </root>

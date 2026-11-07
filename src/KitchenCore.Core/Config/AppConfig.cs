@@ -52,6 +52,39 @@ public sealed class ShoppingConfig
 
     /// <summary>Shown under the trip: "Drive", "Livraison"... Optional.</summary>
     public string? Channel { get; set; }
+
+    /// <summary>
+    /// The lists, one tab each, in tab order; the first is where the page opens.
+    /// Null means the built-in set, see <see cref="EffectiveLists"/>.
+    /// </summary>
+    public List<ShoppingListDefinition>? Lists { get; set; }
+
+    /// <summary>
+    /// The lists as configured, keeping only keys usable as a file and folder
+    /// name, each key once. At most one is weekly: the first one marked so.
+    /// The rhythm above is that list's; the others are bought whenever.
+    /// </summary>
+    public IReadOnlyList<ShoppingListDefinition> EffectiveLists
+    {
+        get
+        {
+            var lists = (Lists is { Count: > 0 } configured ? configured : DefaultLists())
+                .Where(l => ShoppingListDefinition.IsValidKey(l.Key))
+                .DistinctBy(l => l.Key)
+                .ToList();
+
+            var weekly = lists.FirstOrDefault(l => l.Weekly);
+
+            return [.. lists.Select(l => l.Weekly && !ReferenceEquals(l, weekly) ? l with { Weekly = false } : l)];
+        }
+    }
+
+    private static List<ShoppingListDefinition> DefaultLists() =>
+    [
+        new() { Key = "auchan", Weekly = true, Labels = { ["fr"] = "Auchan", ["en"] = "Auchan" } },
+        new() { Key = "delhaize", Labels = { ["fr"] = "Delhaize", ["en"] = "Delhaize" } },
+        new() { Key = "others", Labels = { ["fr"] = "Autres", ["en"] = "Others" } },
+    ];
 }
 
 /// <summary>Contents of config/app.yaml.</summary>

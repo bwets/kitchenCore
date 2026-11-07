@@ -61,6 +61,13 @@ weeks:
                                       # week; reused items share the file
 ```
 
+That is the **weekly** list (Auchan). The other lists are ad hoc -- no dates, one
+running list each in `data/shopping/lists/<key>.yaml` (`items:` as above), with
+pictures in `photos/<key>/`. Lists are config (`shopping.lists` in app.yaml: key,
+labels, `weekly: true` on at most one), one tab each at `/shopping/<key>`; without
+it the default is auchan (weekly), delhaize, others. Items move between lists
+(`items/transfer`); never between two weeks -- that is postpone.
+
 Photos are served by `/api/shopping/photos/...` behind the device header, so the
 page loads them through `js/photos.js` (fetch + blob URL), not `<img src>`. The
 type is sniffed from the bytes on upload, never taken from the request. A file

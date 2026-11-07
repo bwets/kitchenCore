@@ -49,6 +49,25 @@ export function focusAndSelect(element) {
     }
 }
 
+// A pop-up menu hangs below its button, which near the bottom of the screen puts
+// half of it out of sight. Open it upwards instead when there is more room above.
+// (On a phone it is a bottom sheet, fixed in place, and this changes nothing.)
+export function placeMenu(menu) {
+    if (!menu) {
+        return;
+    }
+
+    menu.classList.remove('is-up');
+
+    const margin = 8;
+    const rect = menu.getBoundingClientRect();
+    const anchor = menu.parentElement.getBoundingClientRect();
+
+    if (rect.bottom > window.innerHeight - margin && anchor.top > window.innerHeight - anchor.bottom) {
+        menu.classList.add('is-up');
+    }
+}
+
 // Brings an element into view. Used to open the list view at today rather than
 // at the 1st of the month, which is rarely where anyone wants to start reading.
 export function scrollIntoView(id) {

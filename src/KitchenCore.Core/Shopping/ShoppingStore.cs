@@ -111,7 +111,7 @@ public enum ShoppingRefusal
 /// order to Wednesday moves every following week too, until one is edited
 /// again -- "next week, same as this week" without anyone copying anything.
 /// </summary>
-public sealed class ShoppingStore(KitchenPaths paths, AppConfigLoader config, ShoppingPhotos photos)
+public sealed partial class ShoppingStore(KitchenPaths paths, AppConfigLoader config, ShoppingPhotos photos)
 {
     private const string MomentFormat = "yyyy-MM-dd HH:mm";
 
@@ -309,57 +309,22 @@ public sealed class ShoppingStore(KitchenPaths paths, AppConfigLoader config, Sh
     /// says it all.
     /// </summary>
     public Task AddItemAsync(DateOnly anyDayOfWeek, string title, string? by, string? photo = null, CancellationToken cancellationToken = default) =>
-        MutateWeekAsync(anyDayOfWeek, record =>
-        {
-            title = title.Trim();
-
-            // Already on the list: nothing to add. Already ticked off: wanted
-            // again, so it goes back on rather than appearing twice. Untitled
-            // pictures are never the same thing as each other.
-            if (title.Length > 0 && record.Items.FirstOrDefault(i => ShoppingTitles.Same(i.Title, title)) is { } existing)
-            {
-                existing.State = ShoppingItemStatus.Open;
-                existing.Photo ??= photo;
-                return ShoppingRefusal.None;
-            }
-
-            record.Items.Add(new ShoppingItemRecord
-            {
-                Title = title,
-                By = string.IsNullOrWhiteSpace(by) ? null : by,
-                AddedAt = DateOnly.FromDateTime(DateTime.Now),
-                Photo = photo,
-            });
-
-            return ShoppingRefusal.None;
-        }, cancellationToken);
+        MutateWeekAsync(anyDayOfWeek, record => AddTo(record.Items, title, by, photo), cancellationToken);
 
     /// <summary>Moves an item to a new position in the list.</summary>
     public Task<ShoppingRefusal> MoveItemAsync(DateOnly anyDayOfWeek, int ordinal, string title, int to, CancellationToken cancellationToken = default) =>
-        MutateWeekAsync(anyDayOfWeek, record =>
-        {
-            if (Find(record, ordinal, title) is not { } item)
-            {
-                return ShoppingRefusal.NotFound;
-            }
-
-            record.Items.RemoveAt(ordinal);
-            record.Items.Insert(Math.Clamp(to, 0, record.Items.Count), item);
-            return ShoppingRefusal.None;
-        }, cancellationToken);
+        MutateWeekAsync(anyDayOfWeek, record => Move(record.Items, ordinal, title, to), cancellationToken);
 
     /// <summary>Ticks an item off -- bought, not found, refused -- or back to still to get.</summary>
     public Task<ShoppingRefusal> SetStatusAsync(DateOnly anyDayOfWeek, int ordinal, string title, ShoppingItemStatus status, CancellationToken cancellationToken = default) =>
-        MutateWeekAsync(anyDayOfWeek, record =>
-        {
-            if (Find(record, ordinal, title) is not { } item)
-            {
-                return ShoppingRefusal.NotFound;
-            }
+        MutateWeekAsync(anyDayOfWeek, record => SetStatus(record.Items, ordinal, title, status), cancellationToken);
 
-            item.State = status;
-            return ShoppingRefusal.None;
-        }, cancellationToken);
+    /// <summary>
+    /// Retitles an item. <paramref name="onlyBy"/> restricts it to items that
+    /// person added, as for removing.
+    /// </summary>
+    public Task<ShoppingRefusal> RenameItemAsync(DateOnly anyDayOfWeek, int ordinal, string title, string newTitle, string? onlyBy, CancellationToken cancellationToken = default) =>
+        MutateWeekAsync(anyDayOfWeek, record => Rename(record.Items, ordinal, title, newTitle, onlyBy), cancellationToken);
 
     /// <summary>
     /// Moves an item to the following week's list, as still to get: "not this
@@ -372,7 +337,7 @@ public sealed class ShoppingStore(KitchenPaths paths, AppConfigLoader config, Sh
 
         return MutateWeeksAsync(week, week.AddDays(7), (from, to) =>
         {
-            if (Find(from, ordinal, title) is not { } item)
+            if (Find(from.Items, ordinal, title) is not { } item)
             {
                 return ShoppingRefusal.NotFound;
             }
@@ -403,22 +368,7 @@ public sealed class ShoppingStore(KitchenPaths paths, AppConfigLoader config, Sh
     {
         string? photo = null;
 
-        var refusal = await MutateWeekAsync(anyDayOfWeek, record =>
-        {
-            if (Find(record, ordinal, title) is not { } item)
-            {
-                return ShoppingRefusal.NotFound;
-            }
-
-            if (onlyBy is not null && !string.Equals(item.By, onlyBy, StringComparison.Ordinal))
-            {
-                return ShoppingRefusal.NotYours;
-            }
-
-            photo = item.Photo;
-            record.Items.RemoveAt(ordinal);
-            return ShoppingRefusal.None;
-        }, cancellationToken);
+        var refusal = await MutateWeekAsync(anyDayOfWeek, record => Remove(record.Items, ordinal, title, onlyBy, out photo), cancellationToken);
 
         if (photo is not null)
         {
@@ -439,11 +389,15 @@ public sealed class ShoppingStore(KitchenPaths paths, AppConfigLoader config, Sh
 
         try
         {
-            var used = Directory.Exists(paths.ShoppingRoot) && Directory
-                .EnumerateFiles(paths.ShoppingRoot, "*.yaml")
-                .SelectMany(file => Load(file).Weeks.Values)
-                .SelectMany(week => week.Items)
-                .Any(item => string.Equals(item.Photo, photo, StringComparison.Ordinal));
+            var weekly = Directory.Exists(paths.ShoppingRoot)
+                ? Directory.EnumerateFiles(paths.ShoppingRoot, "*.yaml").SelectMany(file => Load(file).Weeks.Values).SelectMany(week => week.Items)
+                : [];
+
+            var adHoc = Directory.Exists(ListsRoot)
+                ? Directory.EnumerateFiles(ListsRoot, "*.yaml").SelectMany(file => LoadList(file).Items)
+                : [];
+
+            var used = weekly.Concat(adHoc).Any(item => string.Equals(item.Photo, photo, StringComparison.Ordinal));
 
             if (!used)
             {
@@ -456,11 +410,113 @@ public sealed class ShoppingStore(KitchenPaths paths, AppConfigLoader config, Sh
         }
     }
 
-    private static ShoppingItemRecord? Find(ShoppingWeekRecord record, int ordinal, string title) =>
-        ordinal >= 0 && ordinal < record.Items.Count &&
-        string.Equals(record.Items[ordinal].Title, title, StringComparison.Ordinal)
-            ? record.Items[ordinal]
+    private static ShoppingItemRecord? Find(List<ShoppingItemRecord> items, int ordinal, string title) =>
+        ordinal >= 0 && ordinal < items.Count &&
+        string.Equals(items[ordinal].Title, title, StringComparison.Ordinal)
+            ? items[ordinal]
             : null;
+
+    // What every list does to its items, a week's or an ad hoc one alike.
+
+    private static ShoppingRefusal AddTo(List<ShoppingItemRecord> items, string title, string? by, string? photo)
+    {
+        title = title.Trim();
+
+        // Already on the list: nothing to add. Already ticked off: wanted
+        // again, so it goes back on rather than appearing twice. Untitled
+        // pictures are never the same thing as each other.
+        if (title.Length > 0 && items.FirstOrDefault(i => ShoppingTitles.Same(i.Title, title)) is { } existing)
+        {
+            existing.State = ShoppingItemStatus.Open;
+            existing.Photo ??= photo;
+            return ShoppingRefusal.None;
+        }
+
+        items.Add(new ShoppingItemRecord
+        {
+            Title = title,
+            By = string.IsNullOrWhiteSpace(by) ? null : by,
+            AddedAt = DateOnly.FromDateTime(DateTime.Now),
+            Photo = photo,
+        });
+
+        return ShoppingRefusal.None;
+    }
+
+    private static ShoppingRefusal Move(List<ShoppingItemRecord> items, int ordinal, string title, int to)
+    {
+        if (Find(items, ordinal, title) is not { } item)
+        {
+            return ShoppingRefusal.NotFound;
+        }
+
+        items.RemoveAt(ordinal);
+        items.Insert(Math.Clamp(to, 0, items.Count), item);
+        return ShoppingRefusal.None;
+    }
+
+    private static ShoppingRefusal SetStatus(List<ShoppingItemRecord> items, int ordinal, string title, ShoppingItemStatus status)
+    {
+        if (Find(items, ordinal, title) is not { } item)
+        {
+            return ShoppingRefusal.NotFound;
+        }
+
+        item.State = status;
+        return ShoppingRefusal.None;
+    }
+
+    /// <summary>
+    /// A new title for one item. Not merged into another line that already has
+    /// that title: somebody fixing a typo should see their line change, not vanish.
+    /// </summary>
+    private static ShoppingRefusal Rename(List<ShoppingItemRecord> items, int ordinal, string title, string newTitle, string? onlyBy)
+    {
+        if (Find(items, ordinal, title) is not { } item)
+        {
+            return ShoppingRefusal.NotFound;
+        }
+
+        if (onlyBy is not null && !string.Equals(item.By, onlyBy, StringComparison.Ordinal))
+        {
+            return ShoppingRefusal.NotYours;
+        }
+
+        item.Title = newTitle.Trim();
+        return ShoppingRefusal.None;
+    }
+
+    private static ShoppingRefusal Remove(List<ShoppingItemRecord> items, int ordinal, string title, string? onlyBy, out string? photo)
+    {
+        photo = null;
+
+        if (Find(items, ordinal, title) is not { } item)
+        {
+            return ShoppingRefusal.NotFound;
+        }
+
+        if (onlyBy is not null && !string.Equals(item.By, onlyBy, StringComparison.Ordinal))
+        {
+            return ShoppingRefusal.NotYours;
+        }
+
+        photo = item.Photo;
+        items.RemoveAt(ordinal);
+        return ShoppingRefusal.None;
+    }
+
+    private static List<ShoppingItem> ToItems(IEnumerable<ShoppingItemRecord> items) =>
+    [
+        .. items.Select((item, index) => new ShoppingItem
+        {
+            Ordinal = index,
+            Title = item.Title,
+            By = item.By,
+            Status = item.State,
+            AddedAt = item.AddedAt,
+            Photo = item.Photo,
+        }),
+    ];
 
     private ShoppingSession ToSession(DateOnly week, IReadOnlyDictionary<DateOnly, ShoppingWeekRecord> weeks)
     {
@@ -471,18 +527,7 @@ public sealed class ShoppingStore(KitchenPaths paths, AppConfigLoader config, Sh
             Week = week,
             Trip = TripFor(week, weeks),
             Scheduled = record is not null && HasDates(record),
-            Items =
-            [
-                .. (record?.Items ?? []).Select((item, index) => new ShoppingItem
-                {
-                    Ordinal = index,
-                    Title = item.Title,
-                    By = item.By,
-                    Status = item.State,
-                    AddedAt = item.AddedAt,
-                    Photo = item.Photo,
-                }),
-            ],
+            Items = ToItems(record?.Items ?? []),
         };
     }
 

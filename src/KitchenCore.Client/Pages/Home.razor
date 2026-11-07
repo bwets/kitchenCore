@@ -2,6 +2,7 @@
 @inject MenuClient Menu
 @inject SystemStatusService Status
 @inject IShoppingSchedule Shopping
+@inject EditMode EditMode
 @inject IStringLocalizer<Strings> L
 
 <PageTitle>@L["AppName"]</PageTitle>
@@ -43,9 +44,17 @@
                         else
                         {
                             <span class="today__titles">
-                                @foreach (var entry in cell.Entries)
+                                @for (var i = 0; i < cell.Entries.Count; i++)
                                 {
-                                    <span class="today__title">@entry.Title</span>
+                                    var target = new MenuEntryRef(Today, slot.Key, i, cell.Entries[i]);
+
+                                    <button type="button" class="today__title" @onclick="() => _open = target">
+                                        @target.Entry.Title
+                                        @if (!string.IsNullOrWhiteSpace(target.Entry.Notes) || target.Entry.Links.Count > 0)
+                                        {
+                                            <span class="today__more" aria-hidden="true">…</span>
+                                        }
+                                    </button>
                                 }
                             </span>
 
@@ -106,8 +115,17 @@
 
 </div>
 
+@* The same details as from the menu views, and the same rule: an editor edits
+   here only with edit mode on. *@
+<EntryDialog Target="@_open"
+             ReadOnly="@(!EditMode.On)"
+             Version="@_today?.Version"
+             OnSaved="OnSavedAsync"
+             OnCancelled="@(() => _open = null)" />
+
 @code {
     private MenuRangeResponse? _today;
+    private MenuEntryRef? _open;
     private ShoppingTrip? _trip;
     private bool _tripLoaded;
     private IReadOnlyList<SlotDefinition> _slots = [];
@@ -122,6 +140,12 @@
         _slots = (await Status.GetAsync()).Slots;
         _trip = await Shopping.NextTripAsync();
         _tripLoaded = true;
+        _today = await Menu.DayAsync(Today);
+    }
+
+    private async Task OnSavedAsync()
+    {
+        _open = null;
         _today = await Menu.DayAsync(Today);
     }
 

@@ -353,10 +353,154 @@ public class ShoppingStoreTests
         Assert.Equal(first, suggestion.Photo);
     }
 
+    [Fact]
+    public void Without_lists_in_config_there_is_one_weekly_list_and_two_ad_hoc_ones()
+    {
+        using var scenario = FixtureScenario.Open("empty");
+
+        var lists = scenario.Shopping.Lists(new DateTime(2026, 10, 14, 9, 0, 0));
+
+        Assert.Equal(["auchan", "delhaize", "others"], lists.Select(l => l.List.Key));
+        Assert.Equal([true, false, false], lists.Select(l => l.List.Weekly));
+        Assert.Null(scenario.Shopping.AdHocList("auchan"));
+    }
+
+    [Fact]
+    public void Lists_come_from_config_and_an_ad_hoc_list_from_its_own_file()
+    {
+        using var scenario = FixtureScenario.Open("shopping");
+
+        var lists = scenario.Shopping.Lists(new DateTime(2026, 10, 14, 9, 0, 0));
+
+        Assert.Equal(["Auchan", "Delhaize", "Autres"], lists.Select(l => l.List.Label("fr")));
+        Assert.Equal(2, lists.Single(l => l.List.Key == "delhaize").Open);
+        Assert.Equal(3, scenario.Shopping.List("delhaize").Items.Count);
+    }
+
+    [Fact]
+    public void Only_the_first_weekly_list_is_weekly_and_unusable_keys_are_dropped()
+    {
+        var config = new Core.Config.ShoppingConfig
+        {
+            Lists =
+            [
+                new ShoppingListDefinition { Key = "a", Weekly = true },
+                new ShoppingListDefinition { Key = "../b" },
+                new ShoppingListDefinition { Key = "c", Weekly = true },
+            ],
+        };
+
+        Assert.Equal(["a", "c"], config.EffectiveLists.Select(l => l.Key));
+        Assert.Equal([true, false], config.EffectiveLists.Select(l => l.Weekly));
+    }
+
+    [Fact]
+    public async Task An_ad_hoc_list_keeps_its_items_in_its_own_file_and_counts_on_its_tab()
+    {
+        using var scenario = FixtureScenario.Open("empty");
+
+        await scenario.Shopping.AddToListAsync("delhaize", "Chocolat noir", "Emma");
+        await scenario.Shopping.AddToListAsync("delhaize", "chocolats noirs", "Papa");   // the same thing
+        await scenario.Shopping.AddToListAsync("delhaize", "Café", "Papa");
+
+        var list = scenario.Shopping.List("delhaize");
+        Assert.Equal(["Chocolat noir", "Café"], list.Items.Select(i => i.Title));
+        Assert.True(File.Exists(Path.Combine(scenario.Shopping.ListsRoot, "delhaize.yaml")));
+
+        // Nothing leaked onto the weekly list.
+        Assert.Empty(scenario.Shopping.Session(ThisWeek).Items);
+
+        var tab = scenario.Shopping.Lists(DateTime.Now).Single(l => l.List.Key == "delhaize");
+        Assert.Equal(2, tab.Open);
+    }
+
+    [Fact]
+    public async Task Clearing_an_ad_hoc_list_takes_off_what_is_settled_and_its_pictures()
+    {
+        using var scenario = FixtureScenario.Open("empty");
+        var photo = await scenario.Photos.SaveAsync("others", new MemoryStream([1, 2, 3]), "jpg");
+
+        await scenario.Shopping.AddToListAsync("others", "Piles", null, photo);
+        await scenario.Shopping.AddToListAsync("others", "Ampoule", null);
+        await scenario.Shopping.SetStatusInListAsync("others", 0, "Piles", ShoppingItemStatus.Bought);
+
+        await scenario.Shopping.ClearSettledAsync("others");
+
+        Assert.Equal(["Ampoule"], scenario.Shopping.List("others").Items.Select(i => i.Title));
+        Assert.Null(scenario.Photos.Resolve(photo));
+    }
+
+    [Fact]
+    public async Task A_picture_used_on_an_ad_hoc_list_is_kept_when_a_week_lets_go_of_it()
+    {
+        using var scenario = FixtureScenario.Open("empty");
+        var photo = await scenario.Photos.SaveAsync(ThisWeek, new MemoryStream([1, 2, 3]), "jpg");
+
+        await scenario.Shopping.AddItemAsync(ThisWeek, "Yaourts", null, photo);
+        await scenario.Shopping.AddToListAsync("delhaize", "Yaourts", null, photo);
+
+        await scenario.Shopping.RemoveItemAsync(ThisWeek, 0, "Yaourts", onlyBy: null);
+
+        Assert.NotNull(scenario.Photos.Resolve(photo));
+    }
+
+    [Fact]
+    public async Task Moving_an_item_between_lists_keeps_who_asked_and_its_picture()
+    {
+        using var scenario = FixtureScenario.Open("empty");
+        var photo = await scenario.Photos.SaveAsync(ThisWeek, new MemoryStream([1, 2, 3]), "jpg");
+        var week = Core.Shopping.ShoppingPlace.OfWeek(ThisWeek);
+        var delhaize = Core.Shopping.ShoppingPlace.OfList("delhaize");
+
+        await scenario.Shopping.AddItemAsync(ThisWeek, "Chocolat", "Emma", photo);
+        await scenario.Shopping.SetStatusAsync(ThisWeek, 0, "Chocolat", ShoppingItemStatus.NotFound);
+
+        Assert.Equal(Core.Shopping.ShoppingRefusal.NotYours,
+            await scenario.Shopping.TransferItemAsync(week, 0, "Chocolat", delhaize, onlyBy: "Papa"));
+        Assert.Equal(Core.Shopping.ShoppingRefusal.None,
+            await scenario.Shopping.TransferItemAsync(week, 0, "Chocolat", delhaize, onlyBy: "Emma"));
+
+        Assert.Empty(scenario.Shopping.Session(ThisWeek).Items);
+        var moved = Assert.Single(scenario.Shopping.List("delhaize").Items);
+        Assert.Equal(("Chocolat", "Emma", photo, ShoppingItemStatus.Open), (moved.Title, moved.By, moved.Photo, moved.Status));
+
+        // And back, onto a week that already has it: reopened, not doubled.
+        await scenario.Shopping.AddItemAsync(ThisWeek, "chocolats", "Papa");
+        await scenario.Shopping.TransferItemAsync(delhaize, 0, "Chocolat", week, onlyBy: null);
+
+        Assert.Empty(scenario.Shopping.List("delhaize").Items);
+        Assert.False(File.Exists(Path.Combine(scenario.Shopping.ListsRoot, "delhaize.yaml")));
+        Assert.Equal(photo, Assert.Single(scenario.Shopping.Session(ThisWeek).Items).Photo);
+    }
+
+    [Fact]
+    public async Task Only_the_person_who_added_an_item_may_retitle_it_unless_unrestricted()
+    {
+        using var scenario = FixtureScenario.Open("empty");
+        await scenario.Shopping.AddItemAsync(ThisWeek, "Yaourt", "Emma");
+
+        Assert.Equal(Core.Shopping.ShoppingRefusal.NotYours,
+            await scenario.Shopping.RenameItemAsync(ThisWeek, 0, "Yaourt", "Yaourts nature", onlyBy: "Papa"));
+        Assert.Equal(Core.Shopping.ShoppingRefusal.None,
+            await scenario.Shopping.RenameItemAsync(ThisWeek, 0, "Yaourt", "Yaourts nature", onlyBy: "Emma"));
+
+        // An admin is not restricted; a stale title is still caught.
+        Assert.Equal(Core.Shopping.ShoppingRefusal.NotFound,
+            await scenario.Shopping.RenameItemAsync(ThisWeek, 0, "Yaourt", "Yaourts grecs", onlyBy: null));
+        Assert.Equal(Core.Shopping.ShoppingRefusal.None,
+            await scenario.Shopping.RenameItemAsync(ThisWeek, 0, "Yaourts nature", " Yaourts grecs ", onlyBy: null));
+
+        var item = Assert.Single(scenario.Shopping.Session(ThisWeek).Items);
+        Assert.Equal("Yaourts grecs", item.Title);
+        Assert.Equal("Emma", item.By);
+    }
+
     [Theory]
     [InlineData("../../config/devices.yaml")]
     [InlineData("2026-10-12/../../secret.jpg")]
     [InlineData("2026-10-12/ABC.jpg")]
+    [InlineData("../2026-10-12/0123456789abcdef0123456789abcdef.jpg")]
+    [InlineData("delhaize/../0123456789abcdef0123456789abcdef.jpg")]
     public void Photo_paths_outside_the_one_shape_are_refused(string path)
     {
         using var scenario = FixtureScenario.Open("empty");

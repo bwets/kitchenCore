@@ -39,3 +39,14 @@ shopping:
   order: { day: tuesday, time: "20:00" }
   delivery: { day: thursday, time: "15:00" }
   channel: Drive
+
+  # One tab per list, in this order; the first is where the page opens. The
+  # weekly one has the order and delivery above; the others are bought whenever.
+  lists:
+    - key: auchan
+      weekly: true
+      labels: { fr: Auchan, en: Auchan }
+    - key: delhaize
+      labels: { fr: Delhaize, en: Delhaize }
+    - key: others
+      labels: { fr: Autres, en: Others }

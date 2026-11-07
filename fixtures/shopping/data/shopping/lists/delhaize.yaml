@@ -1,0 +1,9 @@
+# An ad hoc list: no dates, bought whenever somebody passes the shop.
+items:
+  - title: Chocolat noir
+    by: Emma
+  - title: Café en grains
+    by: Papa
+  - title: Speculoos
+    by: Emma
+    status: bought

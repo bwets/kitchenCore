@@ -27,6 +27,20 @@ public sealed class UiInterop(IJSRuntime js) : IAsyncDisposable
         }
     }
 
+    /// <summary>Opens a pop-up menu upwards when it would run off the bottom of the screen.</summary>
+    public async Task PlaceMenuAsync(ElementReference menu)
+    {
+        try
+        {
+            var module = await ModuleAsync();
+            await module.InvokeVoidAsync("placeMenu", menu);
+        }
+        catch (JSException)
+        {
+            // Closed before it could be placed.
+        }
+    }
+
     /// <summary>Scrolls an element into the middle of the viewport, if it exists.</summary>
     public async Task ScrollIntoViewAsync(string elementId)
     {

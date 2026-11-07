@@ -52,17 +52,24 @@ public sealed class ShoppingClient(HttpClient http) : IShoppingSchedule
 
     /// <summary>The session new items should go to.</summary>
     public Task<ShoppingSession> CurrentAsync(CancellationToken cancellationToken = default) =>
-        GetAsync("api/shopping/current", cancellationToken);
+        GetAsync<ShoppingSession>("api/shopping/current", cancellationToken);
 
     public Task<ShoppingSession> SessionAsync(DateOnly week, CancellationToken cancellationToken = default) =>
-        GetAsync($"api/shopping/sessions/{Iso(week)}", cancellationToken);
+        GetAsync<ShoppingSession>(ShoppingScope.Week(week).Base, cancellationToken);
+
+    /// <summary>The tabs: every list, with what is still to get on each.</summary>
+    public Task<List<ShoppingListSummary>> ListsAsync(CancellationToken cancellationToken = default) =>
+        GetAsync<List<ShoppingListSummary>>("api/shopping/lists", cancellationToken);
+
+    public Task<ShoppingListContent> ListAsync(string key, CancellationToken cancellationToken = default) =>
+        GetAsync<ShoppingListContent>(ShoppingScope.List(key).Base, cancellationToken);
 
     /// <summary>Earlier lists' items. Only a convenience, so a failure is just "no suggestions".</summary>
-    public async Task<ShoppingSuggestions> SuggestionsAsync(DateOnly week, CancellationToken cancellationToken = default)
+    public async Task<ShoppingSuggestions> SuggestionsAsync(ShoppingScope scope, CancellationToken cancellationToken = default)
     {
         try
         {
-            return await http.GetFromJsonAsync<ShoppingSuggestions>($"{Base(week)}/suggestions", cancellationToken)
+            return await http.GetFromJsonAsync<ShoppingSuggestions>($"{scope.Base}/suggestions", cancellationToken)
                 ?? new ShoppingSuggestions();
         }
         catch (Exception ex) when (ex is HttpRequestException or System.Text.Json.JsonException)
@@ -72,43 +79,55 @@ public sealed class ShoppingClient(HttpClient http) : IShoppingSchedule
     }
 
     public Task<ShoppingOutcome> SetScheduleAsync(DateOnly week, ShoppingScheduleUpdate update, CancellationToken cancellationToken = default) =>
-        SendAsync(HttpMethod.Put, $"{Base(week)}/schedule", update, cancellationToken);
+        SendAsync(ShoppingScope.Week(week), HttpMethod.Put, "schedule", update, cancellationToken);
 
     public Task<ShoppingOutcome> ClearScheduleAsync(DateOnly week, CancellationToken cancellationToken = default) =>
-        SendAsync(HttpMethod.Delete, $"{Base(week)}/schedule", null, cancellationToken);
+        SendAsync(ShoppingScope.Week(week), HttpMethod.Delete, "schedule", null, cancellationToken);
 
-    public Task<ShoppingOutcome> AddItemAsync(DateOnly week, string title, string? photo = null, CancellationToken cancellationToken = default) =>
-        SendAsync(HttpMethod.Post, $"{Base(week)}/items", new NewShoppingItem { Title = title, Photo = photo }, cancellationToken);
+    public Task<ShoppingOutcome> AddItemAsync(ShoppingScope scope, string title, string? photo = null, CancellationToken cancellationToken = default) =>
+        SendAsync(scope, HttpMethod.Post, "items", new NewShoppingItem { Title = title, Photo = photo }, cancellationToken);
 
     /// <summary>Where js/photos.js posts a picture; it sends the file itself.</summary>
-    public static string PhotoUploadUrl(DateOnly week) => $"{Base(week)}/items/photo";
+    public static string PhotoUploadUrl(ShoppingScope scope) => $"{scope.Base}/items/photo";
 
-    public Task<ShoppingOutcome> MoveItemAsync(DateOnly week, ShoppingItem item, int to, CancellationToken cancellationToken = default) =>
-        SendAsync(HttpMethod.Post, $"{Base(week)}/items/move",
+    public Task<ShoppingOutcome> MoveItemAsync(ShoppingScope scope, ShoppingItem item, int to, CancellationToken cancellationToken = default) =>
+        SendAsync(scope, HttpMethod.Post, "items/move",
             new ShoppingItemMove { Ordinal = item.Ordinal, Title = item.Title, To = to }, cancellationToken);
 
-    public Task<ShoppingOutcome> SetStatusAsync(DateOnly week, ShoppingItem item, ShoppingItemStatus status, CancellationToken cancellationToken = default) =>
-        SendAsync(HttpMethod.Post, $"{Base(week)}/items/status",
+    public Task<ShoppingOutcome> SetStatusAsync(ShoppingScope scope, ShoppingItem item, ShoppingItemStatus status, CancellationToken cancellationToken = default) =>
+        SendAsync(scope, HttpMethod.Post, "items/status",
             new ShoppingItemStatusChange { Ordinal = item.Ordinal, Title = item.Title, Status = status }, cancellationToken);
+
+    public Task<ShoppingOutcome> RenameItemAsync(ShoppingScope scope, ShoppingItem item, string newTitle, CancellationToken cancellationToken = default) =>
+        SendAsync(scope, HttpMethod.Post, "items/rename",
+            new ShoppingItemRename { Ordinal = item.Ordinal, Title = item.Title, NewTitle = newTitle }, cancellationToken);
+
+    /// <summary>Moves an item onto another list, by key. Answers with the list it left.</summary>
+    public Task<ShoppingOutcome> TransferAsync(ShoppingScope scope, ShoppingItem item, string to, CancellationToken cancellationToken = default) =>
+        SendAsync(scope, HttpMethod.Post, "items/transfer",
+            new ShoppingItemTransfer { Ordinal = item.Ordinal, Title = item.Title, To = to }, cancellationToken);
 
     /// <summary>Moves an item onto next week's list.</summary>
     public Task<ShoppingOutcome> PostponeAsync(DateOnly week, ShoppingItem item, CancellationToken cancellationToken = default) =>
-        SendAsync(HttpMethod.Post, $"{Base(week)}/items/postpone",
+        SendAsync(ShoppingScope.Week(week), HttpMethod.Post, "items/postpone",
             new ShoppingItemRef { Ordinal = item.Ordinal, Title = item.Title }, cancellationToken);
 
-    public Task<ShoppingOutcome> RemoveItemAsync(DateOnly week, ShoppingItem item, CancellationToken cancellationToken = default) =>
-        SendAsync(HttpMethod.Delete,
-            $"{Base(week)}/items/{item.Ordinal}?title={Uri.EscapeDataString(item.Title)}", null, cancellationToken);
+    public Task<ShoppingOutcome> RemoveItemAsync(ShoppingScope scope, ShoppingItem item, CancellationToken cancellationToken = default) =>
+        SendAsync(scope, HttpMethod.Delete,
+            $"items/{item.Ordinal}?title={Uri.EscapeDataString(item.Title)}", null, cancellationToken);
 
-    private static string Base(DateOnly week) => $"api/shopping/sessions/{Iso(week)}";
+    /// <summary>Takes everything settled off an ad hoc list.</summary>
+    public Task<ShoppingOutcome> ClearSettledAsync(string list, CancellationToken cancellationToken = default) =>
+        SendAsync(ShoppingScope.List(list), HttpMethod.Post, "clear", null, cancellationToken);
 
     /// <summary>
-    /// A write. Every one answers with the session as it now stands, so the page
-    /// shows the result without a second round trip.
+    /// A write. Every one answers with the list as it now stands -- the week's
+    /// session, or the ad hoc list -- so the page shows the result without a
+    /// second round trip.
     /// </summary>
-    private async Task<ShoppingOutcome> SendAsync(HttpMethod method, string url, object? body, CancellationToken cancellationToken)
+    private async Task<ShoppingOutcome> SendAsync(ShoppingScope scope, HttpMethod method, string path, object? body, CancellationToken cancellationToken)
     {
-        var request = new HttpRequestMessage(method, url);
+        var request = new HttpRequestMessage(method, $"{scope.Base}/{path}");
 
         if (body is not null)
         {
@@ -137,13 +156,12 @@ public sealed class ShoppingClient(HttpClient http) : IShoppingSchedule
             return new ShoppingOutcome { ResourceKey = ApiException.From(response.StatusCode).ResourceKey };
         }
 
-        return new ShoppingOutcome
-        {
-            Session = await response.Content.ReadFromJsonAsync<ShoppingSession>(cancellationToken),
-        };
+        return scope.IsWeek
+            ? new ShoppingOutcome { Session = await response.Content.ReadFromJsonAsync<ShoppingSession>(cancellationToken) }
+            : new ShoppingOutcome { List = await response.Content.ReadFromJsonAsync<ShoppingListContent>(cancellationToken) };
     }
 
-    private async Task<ShoppingSession> GetAsync(string url, CancellationToken cancellationToken)
+    private async Task<T> GetAsync<T>(string url, CancellationToken cancellationToken)
     {
         HttpResponseMessage response;
 
@@ -161,20 +179,47 @@ public sealed class ShoppingClient(HttpClient http) : IShoppingSchedule
             throw ApiException.From(response.StatusCode);
         }
 
-        return await response.Content.ReadFromJsonAsync<ShoppingSession>(cancellationToken)
+        return await response.Content.ReadFromJsonAsync<T>(cancellationToken)
             ?? throw new ApiException(ApiFailure.Server, "Empty response.");
     }
 
     private static string Iso(DateOnly date) => date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
 }
 
-/// <summary>Result of a shopping write: the session as it now stands, or why not.</summary>
+/// <summary>
+/// Which list a write goes to: one week of the weekly list, or an ad hoc list.
+/// The item operations are the same on both; only the address differs.
+/// </summary>
+public sealed record ShoppingScope
+{
+    private ShoppingScope(string @base, bool isWeek)
+    {
+        Base = @base;
+        IsWeek = isWeek;
+    }
+
+    public string Base { get; }
+
+    public bool IsWeek { get; }
+
+    public static ShoppingScope Week(DateOnly week) =>
+        new($"api/shopping/sessions/{week.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)}", isWeek: true);
+
+    public static ShoppingScope List(string key) =>
+        new($"api/shopping/lists/{Uri.EscapeDataString(key)}", isWeek: false);
+}
+
+/// <summary>Result of a shopping write: the list as it now stands, or why not.</summary>
 public sealed record ShoppingOutcome
 {
+    /// <summary>Set when the write went to a week.</summary>
     public ShoppingSession? Session { get; init; }
+
+    /// <summary>Set when the write went to an ad hoc list.</summary>
+    public ShoppingListContent? List { get; init; }
 
     /// <summary>Resource key for what went wrong, when something did.</summary>
     public string? ResourceKey { get; init; }
 
-    public bool Success => Session is not null;
+    public bool Success => Session is not null || List is not null;
 }

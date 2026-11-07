@@ -5,7 +5,7 @@ using KitchenCore.Core.Config;
 namespace KitchenCore.Core.Shopping;
 
 /// <summary>
-/// Pictures of shopping items, one folder per session:
+/// Pictures of shopping items, one folder per session (or per ad hoc list):
 /// <c>data/shopping/photos/2026-10-19/3f2a….jpg</c>.
 ///
 /// Items refer to a picture by that relative path, so reusing a past item
@@ -48,9 +48,20 @@ public sealed partial class ShoppingPhotos(KitchenPaths paths)
     };
 
     /// <summary>Stores a picture in the week's folder and returns the path items refer to it by.</summary>
-    public async Task<string> SaveAsync(DateOnly week, Stream content, string extension, CancellationToken cancellationToken = default)
+    public Task<string> SaveAsync(DateOnly week, Stream content, string extension, CancellationToken cancellationToken = default) =>
+        SaveAsync(week.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture), content, extension, cancellationToken);
+
+    /// <summary>
+    /// Stores a picture in a named folder: a week's date, or an ad hoc list's
+    /// key, which has no weeks. Either way a name that passes <see cref="Shape"/>.
+    /// </summary>
+    public async Task<string> SaveAsync(string folder, Stream content, string extension, CancellationToken cancellationToken = default)
     {
-        var folder = week.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
+        if (!Folder().IsMatch(folder))
+        {
+            throw new ArgumentException($"'{folder}' is not a photo folder.", nameof(folder));
+        }
+
         var name = $"{Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(16))}.{extension}";
         var directory = Path.Combine(Root, folder);
 
@@ -98,6 +109,11 @@ public sealed partial class ShoppingPhotos(KitchenPaths paths)
         }
     }
 
-    [GeneratedRegex(@"^\d{4}-\d{2}-\d{2}/[0-9a-f]{32}\.(jpg|png|webp|gif|heic)$")]
+    // A week's date or a list key: lower-case letters, digits and dashes, never
+    // a dot, so never "..".
+    [GeneratedRegex(@"^[a-z0-9-]{1,40}$")]
+    private static partial Regex Folder();
+
+    [GeneratedRegex(@"^[a-z0-9-]{1,40}/[0-9a-f]{32}\.(jpg|png|webp|gif|heic)$")]
     private static partial Regex Shape();
 }

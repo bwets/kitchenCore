@@ -1,17 +1,20 @@
 @page "/shopping"
+@page "/shopping/{ListKey}"
 @implements IAsyncDisposable
 @inject ShoppingClient Client
 @inject AuthService Auth
 @inject IJSRuntime JS
+@inject UiInterop Ui
 @inject IStringLocalizer<Strings> L
 
 @*
-    One shopping session at a time: the week's order and delivery, and the
-    list for it.
+    One list per shop, one tab each, defined in config. The weekly one (Auchan)
+    is one session at a time: the week's order and delivery, and the list for
+    it. The others are a single running list each, bought whenever.
 
-    Opens on the session new items go to -- the next one not ordered yet -- so
-    asking for milk on a Wednesday, after Tuesday's order went in, lands on next
-    week's list without anybody having to think about it.
+    The weekly list opens on the session new items go to -- the next one not
+    ordered yet -- so asking for milk on a Wednesday, after Tuesday's order went
+    in, lands on next week's list without anybody having to think about it.
 
     No categories and no aisles, on purpose: it is a family list, not a store
     layout. Order is whatever the family drags it into.
@@ -19,12 +22,39 @@
 
 <PageTitle>@L["Shopping_Title"] · @L["AppName"]</PageTitle>
 
-<div class="week-bar">
-    <button type="button" class="week-bar__button" @onclick="() => ShiftAsync(-7)" title="@L["Shopping_PreviousWeek"]">‹</button>
-    <button type="button" class="week-bar__button" @onclick="GoToCurrentAsync">@L["Shopping_Current"]</button>
-    <button type="button" class="week-bar__button" @onclick="() => ShiftAsync(7)" title="@L["Shopping_NextWeek"]">›</button>
+@if (_lists.Count > 1)
+{
+    <nav class="list-tabs" role="tablist" aria-label="@L["Shopping_Lists"]">
+        @foreach (var summary in _lists)
+        {
+            var list = summary.List;
+            var active = list.Key == _active?.Key;
 
-    <span class="week-bar__range">@WeekLabel()</span>
+            <a href="@($"shopping/{list.Key}")" role="tab" aria-selected="@active"
+               class="list-tabs__tab @(active ? "is-active" : null)">
+                <span>@list.Label(CurrentCulture)</span>
+                @if (summary.Open > 0)
+                {
+                    <span class="list-tabs__count">@summary.Open</span>
+                }
+            </a>
+        }
+    </nav>
+}
+
+<div class="week-bar">
+    @if (IsWeekly)
+    {
+        <button type="button" class="week-bar__button" @onclick="() => ShiftAsync(-7)" title="@L["Shopping_PreviousWeek"]">‹</button>
+        <button type="button" class="week-bar__button" @onclick="GoToCurrentAsync">@L["Shopping_Current"]</button>
+        <button type="button" class="week-bar__button" @onclick="() => ShiftAsync(7)" title="@L["Shopping_NextWeek"]">›</button>
+
+        <span class="week-bar__range">@WeekLabel()</span>
+    }
+    else
+    {
+        <span class="week-bar__range">@L["Shopping_AdHocHint"]</span>
+    }
     <span class="week-bar__spacer"></span>
 
     <MenuTools Loading="_loading" OnRefresh="RefreshAsync" />
@@ -35,125 +65,138 @@
     <div class="issues">@_error</div>
 }
 
-@if (_session is { } session)
+@if (Loaded)
 {
-    <div class="shopping">
-        <section class="card shopping__trip">
-            <header class="shopping__trip-head">
-                <h2 class="card__title">@L["Shopping_Trip"]</h2>
+    <div class="shopping @(IsWeekly ? null : "shopping--single")">
+        @if (IsWeekly && _session is { } session)
+        {
+            <section class="card shopping__trip">
+                <header class="shopping__trip-head">
+                    <h2 class="card__title">@L["Shopping_Trip"]</h2>
 
-                <div class="shopping__badges">
-                    @if (session.Trip.Placed)
-                    {
-                        <span class="badge badge--ok">@L["Shopping_Placed"]</span>
-                    }
-                    else if (!session.Scheduled)
-                    {
-                        @* Not set for this week: it follows the last week that was. *@
-                        <span class="badge badge--soft" title="@L["Shopping_FollowsHint"]">@L["Shopping_Follows"]</span>
-                    }
-                    @if (session.Trip.Channel is { Length: > 0 } channel)
-                    {
-                        <span class="shopping__channel">@channel</span>
-                    }
-                </div>
-            </header>
-
-            @if (_editingDates)
-            {
-                <div class="shopping__dates-form">
-                    <label class="field">
-                        <span class="field__label">@L["Shopping_Order"]</span>
-                        <input type="datetime-local" class="field__input" @bind="_order" @bind:format="yyyy-MM-ddTHH:mm" />
-                    </label>
-
-                    <label class="field">
-                        <span class="field__label">@L["Shopping_Delivery"]</span>
-                        <input type="datetime-local" class="field__input" @bind="_delivery" @bind:format="yyyy-MM-ddTHH:mm" />
-                    </label>
-
-                    <label class="field field--check">
-                        <input type="checkbox" @bind="_placed" />
-                        <span>@L["Shopping_PlacedCheck"]</span>
-                    </label>
-
-                    <p class="field__hint">@L["Shopping_CarryHint"]</p>
-
-                    <footer class="dialog__foot">
-                        @if (session.Scheduled)
+                    <div class="shopping__badges">
+                        @if (session.Trip.Placed)
                         {
-                            <button type="button" class="button" disabled="@_busy" @onclick="ResetDatesAsync">
-                                @L["Shopping_ResetDates"]
-                            </button>
+                            <span class="badge badge--ok">@L["Shopping_Placed"]</span>
                         }
-                        <span class="dialog__spacer"></span>
-                        <button type="button" class="button" disabled="@_busy" @onclick="() => _editingDates = false">@L["Cancel"]</button>
-                        <button type="button" class="button button--primary"
-                                disabled="@(_busy || _delivery < _order)"
-                                @onclick="SaveDatesAsync">
-                            @L["Save"]
-                        </button>
-                    </footer>
-                </div>
-            }
-            else
-            {
-                <ul class="moments shopping__moments">
-                    @foreach (var (moment, kind, label) in new[]
-                    {
-                        (session.Trip.Order, "order", "Shopping_Order"),
-                        (session.Trip.Delivery, "delivery", "Shopping_Delivery"),
-                    })
-                    {
-                        <li class="moment moment--@kind">
-                            <span class="moment__rule" aria-hidden="true"></span>
-                            <span class="moment__text">
-                                <span class="moment__label">@L[label]</span>
-                                <span class="moment__when">@Format(moment)</span>
-                            </span>
-                            <span class="badge @(moment.IsPredicted ? "badge--soft" : "badge--ok")">
-                                @(moment.IsPredicted ? L["Shopping_Predicted"] : L["Shopping_Confirmed"])
-                            </span>
-                        </li>
-                    }
-                </ul>
+                        else if (!session.Scheduled)
+                        {
+                            @* Not set for this week: it follows the last week that was. *@
+                            <span class="badge badge--soft" title="@L["Shopping_FollowsHint"]">@L["Shopping_Follows"]</span>
+                        }
+                        @if (session.Trip.Channel is { Length: > 0 } channel)
+                        {
+                            <span class="shopping__channel">@channel</span>
+                        }
+                    </div>
+                </header>
 
-                @if (CanEdit)
+                @if (_editingDates)
                 {
-                    <footer class="shopping__trip-actions">
-                        <button type="button" class="button" @onclick="StartEditingDates">@L["Shopping_EditDates"]</button>
-                        <button type="button" class="button @(session.Trip.Placed ? null : "button--primary")"
-                                disabled="@_busy" @onclick="TogglePlacedAsync">
-                            @(session.Trip.Placed ? L["Shopping_Unplace"] : L["Shopping_Place"])
-                        </button>
-                    </footer>
+                    <div class="shopping__dates-form">
+                        <label class="field">
+                            <span class="field__label">@L["Shopping_Order"]</span>
+                            <input type="datetime-local" class="field__input" @bind="_order" @bind:format="yyyy-MM-ddTHH:mm" />
+                        </label>
+
+                        <label class="field">
+                            <span class="field__label">@L["Shopping_Delivery"]</span>
+                            <input type="datetime-local" class="field__input" @bind="_delivery" @bind:format="yyyy-MM-ddTHH:mm" />
+                        </label>
+
+                        <label class="field field--check">
+                            <input type="checkbox" @bind="_placed" />
+                            <span>@L["Shopping_PlacedCheck"]</span>
+                        </label>
+
+                        <p class="field__hint">@L["Shopping_CarryHint"]</p>
+
+                        <footer class="dialog__foot">
+                            @if (session.Scheduled)
+                            {
+                                <button type="button" class="button" disabled="@_busy" @onclick="ResetDatesAsync">
+                                    @L["Shopping_ResetDates"]
+                                </button>
+                            }
+                            <span class="dialog__spacer"></span>
+                            <button type="button" class="button" disabled="@_busy" @onclick="() => _editingDates = false">@L["Cancel"]</button>
+                            <button type="button" class="button button--primary"
+                                    disabled="@(_busy || _delivery < _order)"
+                                    @onclick="SaveDatesAsync">
+                                @L["Save"]
+                            </button>
+                        </footer>
+                    </div>
                 }
-            }
-        </section>
+                else
+                {
+                    <ul class="moments shopping__moments">
+                        @foreach (var (moment, kind, label) in new[]
+                        {
+                            (session.Trip.Order, "order", "Shopping_Order"),
+                            (session.Trip.Delivery, "delivery", "Shopping_Delivery"),
+                        })
+                        {
+                            <li class="moment moment--@kind">
+                                <span class="moment__rule" aria-hidden="true"></span>
+                                <span class="moment__text">
+                                    <span class="moment__label">@L[label]</span>
+                                    <span class="moment__when">@Format(moment)</span>
+                                </span>
+                                <span class="badge @(moment.IsPredicted ? "badge--soft" : "badge--ok")">
+                                    @(moment.IsPredicted ? L["Shopping_Predicted"] : L["Shopping_Confirmed"])
+                                </span>
+                            </li>
+                        }
+                    </ul>
+
+                    @if (CanEdit)
+                    {
+                        <footer class="shopping__trip-actions">
+                            <button type="button" class="button" @onclick="StartEditingDates">@L["Shopping_EditDates"]</button>
+                            <button type="button" class="button @(session.Trip.Placed ? null : "button--primary")"
+                                    disabled="@_busy" @onclick="TogglePlacedAsync">
+                                @(session.Trip.Placed ? L["Shopping_Unplace"] : L["Shopping_Place"])
+                            </button>
+                        </footer>
+                    }
+                }
+            </section>
+        }
 
         <section class="card shopping__list">
             <header class="card__head">
                 <h2 class="card__title">
-                    @L["Shopping_List"]
-                    @if (session.Items.Count > 0)
+                    @(IsWeekly ? L["Shopping_List"] : _active?.Label(CurrentCulture))
+                    @if (Items.Count > 0)
                     {
-                        <span class="shopping__count">@session.Items.Count(i => i.Done)/@session.Items.Count</span>
+                        <span class="shopping__count">@DoneCount/@Items.Count</span>
                     }
                 </h2>
 
-                @if (DoneCount > 0)
-                {
-                    <button type="button" class="shopping__filter @(_hideDone ? null : "is-on")"
-                            aria-pressed="@(!_hideDone)"
-                            @onclick="() => _hideDone = !_hideDone">
-                        @(_hideDone ? string.Format(L["Shopping_ShowDone"], DoneCount) : L["Shopping_HideDone"])
-                    </button>
-                }
+                <span class="shopping__head-actions">
+                    @if (DoneCount > 0 && !IsWeekly && CanEdit)
+                    {
+                        @* A running list is never "next week"; once the shop has been
+                           visited, what was dealt with goes. *@
+                        <button type="button" class="shopping__filter" disabled="@_busy" @onclick="ClearSettledAsync">
+                            @L["Shopping_ClearDone"]
+                        </button>
+                    }
+                    @if (DoneCount > 0)
+                    {
+                        <button type="button" class="shopping__filter @(_hideDone ? null : "is-on")"
+                                aria-pressed="@(!_hideDone)"
+                                @onclick="() => _hideDone = !_hideDone">
+                            @(_hideDone ? string.Format(L["Shopping_ShowDone"], DoneCount) : L["Shopping_HideDone"])
+                        </button>
+                    }
+                </span>
             </header>
 
             @if (CanRequest)
             {
-                @if (session.Trip.Placed)
+                @if (IsWeekly && _session?.Trip.Placed == true)
                 {
                     <p class="field__hint">@L["Shopping_AlreadyPlaced"]</p>
                 }
@@ -238,17 +281,17 @@
                 </div>
             }
 
-            @if (session.Items.Count == 0)
+            @if (Items.Count == 0)
             {
                 <p class="muted">@L["Shopping_Empty"]</p>
             }
-            else if (_hideDone && DoneCount == session.Items.Count)
+            else if (_hideDone && DoneCount == Items.Count)
             {
                 <p class="muted">@L["Shopping_AllDone"]</p>
             }
 
             <ul class="shopping__items" data-sort-list @ref="_list">
-                @foreach (var item in session.Items.Where(i => !_hideDone || !i.Done))
+                @foreach (var item in Items.Where(i => !_hideDone || !i.Done))
                 {
                     <li class="shopping-item @StatusClass(item.Status)" data-sort-item="@item.Ordinal"
                         @key="(item.Ordinal, item.Title)">
@@ -284,20 +327,41 @@
                             </button>
                         }
 
-                        <span class="shopping-item__title">
-                            @item.Title
-                            @if (StatusLabel(item.Status) is { } status)
-                            {
-                                <span class="badge shopping-item__status">@status</span>
-                            }
-                        </span>
-
-                        @if (!string.IsNullOrWhiteSpace(item.By))
+                        @if (IsRenaming(item))
                         {
-                            <span class="shopping-item__by">@item.By</span>
+                            <span class="shopping-item__rename">
+                                <input class="field__input" @ref="_renameField"
+                                       aria-label="@L["Shopping_Rename"]"
+                                       value="@_renameText"
+                                       @oninput="e => _renameText = e.Value?.ToString() ?? string.Empty"
+                                       @onkeydown="e => OnRenameKeyAsync(e, item)" />
+                                <button type="button" class="button button--primary"
+                                        disabled="@(_busy || string.IsNullOrWhiteSpace(_renameText))"
+                                        @onclick="() => RenameAsync(item)">@L["Save"]</button>
+                                <button type="button" class="button" @onclick="() => _renaming = null">@L["Cancel"]</button>
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="shopping-item__title">
+                                @item.Title
+                                @if (StatusLabel(item.Status) is { } status)
+                                {
+                                    <span class="badge shopping-item__status">@status</span>
+                                }
+                            </span>
+
+                            @if (!string.IsNullOrWhiteSpace(item.By))
+                            {
+                                <span class="shopping-item__by">@item.By</span>
+                            }
                         }
 
-                        @if (CanEdit)
+                        @if (IsRenaming(item))
+                        {
+                            @* The row is the editor for now; no menu beside it. *@
+                        }
+                        else if (CanEdit || CanRename(item))
                         {
                             <span class="shopping-item__menu-anchor">
                                 <button type="button" class="shopping-item__more"
@@ -312,31 +376,47 @@
                                 @if (IsMenuOpen(item))
                                 {
                                     <div class="item-menu__scrim" @onclick="() => _menuFor = null"></div>
-                                    <div class="item-menu" role="menu">
-                                        @if (item.Status != ShoppingItemStatus.NotFound)
+                                    <div class="item-menu" role="menu" @ref="_menuRef">
+                                        @if (CanRename(item))
                                         {
-                                            <button type="button" role="menuitem" @onclick="() => SetStatusAsync(item, ShoppingItemStatus.NotFound)">@L["Shopping_MarkNotFound"]</button>
+                                            <button type="button" role="menuitem" @onclick="() => StartRenaming(item)">@L["Shopping_Rename"]</button>
                                         }
-                                        @if (item.Status != ShoppingItemStatus.Refused)
+                                        @if (CanEdit)
                                         {
-                                            <button type="button" role="menuitem" @onclick="() => SetStatusAsync(item, ShoppingItemStatus.Refused)">@L["Shopping_MarkRefused"]</button>
+                                            @if (item.Status != ShoppingItemStatus.NotFound)
+                                            {
+                                                <button type="button" role="menuitem" @onclick="() => SetStatusAsync(item, ShoppingItemStatus.NotFound)">@L["Shopping_MarkNotFound"]</button>
+                                            }
+                                            @if (item.Status != ShoppingItemStatus.Refused)
+                                            {
+                                                <button type="button" role="menuitem" @onclick="() => SetStatusAsync(item, ShoppingItemStatus.Refused)">@L["Shopping_MarkRefused"]</button>
+                                            }
+                                            @if (item.Done)
+                                            {
+                                                <button type="button" role="menuitem" @onclick="() => SetStatusAsync(item, ShoppingItemStatus.Open)">@L["Shopping_Reopen"]</button>
+                                            }
+                                            @if (IsWeekly)
+                                            {
+                                                <button type="button" role="menuitem" @onclick="() => PostponeAsync(item)">@L["Shopping_Postpone"]</button>
+                                            }
                                         }
-                                        @if (item.Done)
+                                        @if (CanRemove(item) && Destinations.Count > 0)
                                         {
-                                            <button type="button" role="menuitem" @onclick="() => SetStatusAsync(item, ShoppingItemStatus.Open)">@L["Shopping_Reopen"]</button>
+                                            <div class="item-menu__group" role="presentation">@L["Shopping_MoveTo"]</div>
+                                            @foreach (var destination in Destinations)
+                                            {
+                                                <button type="button" role="menuitem" @onclick="() => TransferAsync(item, destination.Key)">
+                                                    @destination.Label(CurrentCulture)
+                                                </button>
+                                            }
                                         }
-                                        <button type="button" role="menuitem" @onclick="() => PostponeAsync(item)">@L["Shopping_Postpone"]</button>
-                                        <button type="button" role="menuitem" class="item-menu__danger" @onclick="() => RemoveAsync(item)">@L["Shopping_Remove"]</button>
+                                        @if (CanRemove(item))
+                                        {
+                                            <button type="button" role="menuitem" class="item-menu__danger" @onclick="() => RemoveAsync(item)">@L["Shopping_Remove"]</button>
+                                        }
                                     </div>
                                 }
                             </span>
-                        }
-                        else if (CanRemove(item))
-                        {
-                            <button type="button" class="shopping-item__remove"
-                                    title="@L["Shopping_Remove"]" aria-label="@L["Shopping_Remove"]"
-                                    disabled="@_busy"
-                                    @onclick="() => RemoveAsync(item)">×</button>
                         }
                     </li>
                 }
@@ -373,7 +453,17 @@ else if (_loading)
 }
 
 @code {
+    /// <summary>The tab, from the URL. None means the first list in config.</summary>
+    [Parameter]
+    public string? ListKey { get; set; }
+
+    private List<ShoppingListSummary> _lists = [];
+    private ShoppingListDefinition? _active;
+    private bool _sortAttached;
+
+    // The weekly list's state; _content is an ad hoc list's.
     private ShoppingSession? _session;
+    private ShoppingListContent? _content;
     private DateOnly? _week;
     private bool _loading = true;
     private bool _busy;
@@ -394,9 +484,9 @@ else if (_loading)
     // Ticked-off items are out of the way by default: the list is what is still to get.
     private bool _hideDone = true;
 
-    // The add box's suggestions: fetched once per week, filtered here as the person types.
+    // The add box's suggestions: fetched once per week or list, filtered here as the person types.
     private ShoppingSuggestions? _suggestions;
-    private DateOnly? _suggestionsWeek;
+    private ShoppingScope? _suggestionsFor;
     private bool _suggestOpen;
     private List<SuggestionGroup> _options = [];
     private int _highlight = -1;
@@ -419,7 +509,35 @@ else if (_loading)
     // The item whose action menu is open, by the same (ordinal, title) pair that addresses it.
     private (int Ordinal, string Title)? _menuFor;
 
-    private int DoneCount => _session?.Items.Count(i => i.Done) ?? 0;
+    private ElementReference _menuRef;
+    private bool _menuPlacePending;
+
+    // The item being retitled in place, addressed the same way.
+    private (int Ordinal, string Title)? _renaming;
+    private string _renameText = string.Empty;
+    private ElementReference _renameField;
+    private bool _renameFocusPending;
+
+    /// <summary>No lists from the server (an old one, or a failure) means the weekly list alone, as before.</summary>
+    private bool IsWeekly => _active is null || _active.Weekly;
+
+    private IReadOnlyList<ShoppingItem> Items => (IsWeekly ? _session?.Items : _content?.Items) ?? [];
+
+    private bool Loaded => IsWeekly ? _session is not null : _content is not null;
+
+    /// <summary>Where item writes go: the shown week, or the shown ad hoc list.</summary>
+    private ShoppingScope? Scope => IsWeekly
+        ? _week is { } week ? ShoppingScope.Week(week) : null
+        : ShoppingScope.List(_active!.Key);
+
+    /// <summary>
+    /// The lists an item here can be moved to: every other tab. Between two
+    /// weeks of the weekly list it is "move to next week" instead.
+    /// </summary>
+    private IReadOnlyList<ShoppingListDefinition> Destinations =>
+        [.. _lists.Select(s => s.List).Where(l => l.Key != _active?.Key && !(IsWeekly && l.Weekly))];
+
+    private int DoneCount => Items.Count(i => i.Done);
 
     private bool SuggestionsShown => _suggestOpen && _options.Count > 0;
 
@@ -427,27 +545,84 @@ else if (_loading)
 
     private bool CanRequest => Auth.Identity.CanRequest(Section.Shopping);
 
+    private bool IsMine(ShoppingItem item) =>
+        CanRequest && string.Equals(item.By, Auth.Identity.Name, StringComparison.Ordinal);
+
     /// <summary>Editors remove anything; everyone else only what they added.</summary>
-    private bool CanRemove(ShoppingItem item) =>
-        CanEdit || (CanRequest && string.Equals(item.By, Auth.Identity.Name, StringComparison.Ordinal));
+    private bool CanRemove(ShoppingItem item) => CanEdit || IsMine(item);
+
+    /// <summary>Admins retitle anything; everyone else only what they added.</summary>
+    private bool CanRename(ShoppingItem item) => (Auth.Identity.Admin && CanRequest) || IsMine(item);
+
+    private static string CurrentCulture =>
+        System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadAsync();
+        try
+        {
+            _lists = await Client.ListsAsync();
+        }
+        catch (ApiException)
+        {
+            // Without the tabs the weekly list still works on its own.
+            _lists = [];
+        }
 
         _autoRefresh = new AutoRefresh(JS);
-        await _autoRefresh.StartAsync(() => InvokeAsync(() => LoadAsync(quiet: true)), () => !_editingDates && !_busy && !_uploading && _menuFor is null && _lightbox is null);
+        await _autoRefresh.StartAsync(
+            () => InvokeAsync(() => LoadAsync(quiet: true)),
+            () => !_editingDates && !_busy && !_uploading && _menuFor is null && _renaming is null && _lightbox is null);
+    }
+
+    /// <summary>Switching tabs is a navigation: the same page, another list.</summary>
+    protected override async Task OnParametersSetAsync()
+    {
+        var active = _lists.FirstOrDefault(l => l.List.Key == ListKey)?.List ?? _lists.FirstOrDefault()?.List;
+
+        if (_active is not null && active?.Key == _active.Key && Loaded)
+        {
+            return;
+        }
+
+        _active = active;
+        _session = null;
+        _content = null;
+        _week = null;
+        _suggestions = null;
+        _options = [];
+        _newItem = string.Empty;
+        _hideDone = true;
+        _menuFor = null;
+        _renaming = null;
+        _editingDates = false;
+        _sortAttached = false;
+
+        await LoadAsync();
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        // The list element exists only once a session has rendered, so attach
-        // the first time it does rather than on the first render.
-        if (_sortable is null && _session is not null && CanRequest)
+        // The list element exists only once a list has rendered, and is a new
+        // element after a tab switch, so attach whenever it has not been yet.
+        if (!_sortAttached && Loaded && CanRequest)
         {
+            _sortAttached = true;
             _self ??= DotNetObjectReference.Create(this);
-            _sortable = await JS.InvokeAsync<IJSObjectReference>("import", "./js/sortable.js");
+            _sortable ??= await JS.InvokeAsync<IJSObjectReference>("import", "./js/sortable.js");
             await _sortable.InvokeVoidAsync("attach", _sortId, _list, _self);
+        }
+
+        if (_menuPlacePending && _menuFor is not null)
+        {
+            _menuPlacePending = false;
+            await Ui.PlaceMenuAsync(_menuRef);
+        }
+
+        if (_renameFocusPending)
+        {
+            _renameFocusPending = false;
+            await _renameField.FocusAsync();
         }
 
         // Focused once it opens, so Escape reaches it, and handed to js/zoom.js.
@@ -470,8 +645,8 @@ else if (_loading)
     }
 
     /// <summary>
-    /// Loads the chosen week, or -- before one is chosen -- the session new
-    /// items should go to.
+    /// Loads the shown list: on the weekly one the chosen week, or -- before
+    /// one is chosen -- the session new items should go to.
     /// </summary>
     private async Task LoadAsync(bool quiet = false)
     {
@@ -482,8 +657,16 @@ else if (_loading)
 
         try
         {
-            _session = _week is { } week ? await Client.SessionAsync(week) : await Client.CurrentAsync();
-            _week = _session.Week;
+            if (IsWeekly)
+            {
+                _session = _week is { } week ? await Client.SessionAsync(week) : await Client.CurrentAsync();
+                _week = _session.Week;
+            }
+            else
+            {
+                _content = await Client.ListAsync(_active!.Key);
+            }
+
             _error = null;
         }
         catch (ApiException ex)
@@ -491,11 +674,38 @@ else if (_loading)
             _error = L[ex.ResourceKey];
         }
 
+        if (quiet)
+        {
+            await RefreshCountsAsync();
+        }
+
         _loading = false;
         StateHasChanged();
     }
 
-    private Task RefreshAsync() => LoadAsync();
+    /// <summary>The tabs' counts, after anything that may have changed them.</summary>
+    private async Task RefreshCountsAsync()
+    {
+        if (_lists.Count == 0)
+        {
+            return;
+        }
+
+        try
+        {
+            _lists = await Client.ListsAsync();
+        }
+        catch (ApiException)
+        {
+            // Stale counts are fine until the next refresh.
+        }
+    }
+
+    private async Task RefreshAsync()
+    {
+        await RefreshCountsAsync();
+        await LoadAsync();
+    }
 
     private async Task ShiftAsync(int days)
     {
@@ -523,10 +733,12 @@ else if (_loading)
         {
             var outcome = await write();
 
-            if (outcome.Session is { } session)
+            if (outcome.Success)
             {
-                _session = session;
+                _session = outcome.Session ?? _session;
+                _content = outcome.List ?? _content;
                 _error = null;
+                await RefreshCountsAsync();
             }
             else
             {
@@ -587,10 +799,10 @@ else if (_loading)
     {
         _suggestOpen = true;
 
-        if (_week is { } week && (_suggestions is null || _suggestionsWeek != week))
+        if (Scope is { } scope && (_suggestions is null || _suggestionsFor != scope))
         {
-            _suggestionsWeek = week;
-            _suggestions = await Client.SuggestionsAsync(week);
+            _suggestionsFor = scope;
+            _suggestions = await Client.SuggestionsAsync(scope);
         }
 
         BuildOptions();
@@ -617,7 +829,7 @@ else if (_loading)
             return;
         }
 
-        var onList = (_session?.Items ?? []).Select(i => ShoppingTitles.Key(i.Title)).ToHashSet();
+        var onList = Items.Select(i => ShoppingTitles.Key(i.Title)).ToHashSet();
         var typed = ShoppingTitles.Key(_newItem);
 
         if (typed.Length == 0)
@@ -656,14 +868,14 @@ else if (_loading)
 
     private async Task AddAsync(string? photo)
     {
-        if (_week is not { } week || string.IsNullOrWhiteSpace(_newItem))
+        if (Scope is not { } scope || string.IsNullOrWhiteSpace(_newItem))
         {
             return;
         }
 
         var title = _newItem.Trim();
         _newItem = string.Empty;
-        await ApplyAsync(() => Client.AddItemAsync(week, title, photo));
+        await ApplyAsync(() => Client.AddItemAsync(scope, title, photo));
 
         // What was just added drops out of the suggestions.
         BuildOptions();
@@ -672,25 +884,75 @@ else if (_loading)
     private Task SetStatusAsync(ShoppingItem item, ShoppingItemStatus status)
     {
         _menuFor = null;
-        return _week is { } week ? ApplyAsync(() => Client.SetStatusAsync(week, item, status)) : Task.CompletedTask;
+        return Scope is { } scope ? ApplyAsync(() => Client.SetStatusAsync(scope, item, status)) : Task.CompletedTask;
     }
 
     private Task PostponeAsync(ShoppingItem item)
     {
         _menuFor = null;
-        return _week is { } week ? ApplyAsync(() => Client.PostponeAsync(week, item)) : Task.CompletedTask;
+        return IsWeekly && _week is { } week ? ApplyAsync(() => Client.PostponeAsync(week, item)) : Task.CompletedTask;
     }
 
     private Task RemoveAsync(ShoppingItem item)
     {
         _menuFor = null;
-        return _week is { } week ? ApplyAsync(() => Client.RemoveItemAsync(week, item)) : Task.CompletedTask;
+        return Scope is { } scope ? ApplyAsync(() => Client.RemoveItemAsync(scope, item)) : Task.CompletedTask;
+    }
+
+    private Task ClearSettledAsync() =>
+        !IsWeekly && _active is { } list ? ApplyAsync(() => Client.ClearSettledAsync(list.Key)) : Task.CompletedTask;
+
+    private bool IsRenaming(ShoppingItem item) => _renaming == (item.Ordinal, item.Title);
+
+    private void StartRenaming(ShoppingItem item)
+    {
+        _menuFor = null;
+        _renaming = (item.Ordinal, item.Title);
+        _renameText = item.Title;
+        _renameFocusPending = true;
+    }
+
+    private async Task RenameAsync(ShoppingItem item)
+    {
+        var title = _renameText.Trim();
+
+        // Unchanged is not worth a write, and leaves nothing to commit.
+        if (title.Length > 0 && title != item.Title && Scope is { } scope)
+        {
+            await ApplyAsync(() => Client.RenameItemAsync(scope, item, title));
+        }
+
+        if (title.Length > 0)
+        {
+            _renaming = null;
+        }
+    }
+
+    private async Task OnRenameKeyAsync(KeyboardEventArgs args, ShoppingItem item)
+    {
+        if (args.Key == "Enter")
+        {
+            await RenameAsync(item);
+        }
+        else if (args.Key == "Escape")
+        {
+            _renaming = null;
+        }
     }
 
     private bool IsMenuOpen(ShoppingItem item) => _menuFor == (item.Ordinal, item.Title);
 
-    private void ToggleMenu(ShoppingItem item) =>
+    private void ToggleMenu(ShoppingItem item)
+    {
         _menuFor = IsMenuOpen(item) ? null : (item.Ordinal, item.Title);
+        _menuPlacePending = _menuFor is not null;
+    }
+
+    private Task TransferAsync(ShoppingItem item, string to)
+    {
+        _menuFor = null;
+        return Scope is { } scope ? ApplyAsync(() => Client.TransferAsync(scope, item, to)) : Task.CompletedTask;
+    }
 
     private static string? StatusClass(ShoppingItemStatus status) => status switch
     {
@@ -715,7 +977,7 @@ else if (_loading)
     /// </summary>
     private async Task UploadAsync(ElementReference input)
     {
-        if (_week is not { } week)
+        if (Scope is not { } scope)
         {
             return;
         }
@@ -728,17 +990,15 @@ else if (_loading)
             _photos ??= await JS.InvokeAsync<IJSObjectReference>("import", "./js/photos.js");
 
             var title = _newItem.Trim();
-            var result = await _photos.InvokeAsync<UploadResult?>("upload", input, ShoppingClient.PhotoUploadUrl(week), title);
+            var result = await _photos.InvokeAsync<UploadResult?>("upload", input, ShoppingClient.PhotoUploadUrl(scope), title);
 
             if (result is null)
             {
                 return;   // Nothing chosen: the camera was cancelled.
             }
 
-            if (result.Body is { } body
-                && System.Text.Json.JsonSerializer.Deserialize<ShoppingSession>(body, System.Text.Json.JsonSerializerOptions.Web) is { } session)
+            if (result.Body is { } body && Apply(scope, body))
             {
-                _session = session;
                 _newItem = string.Empty;
                 _error = null;
                 BuildOptions();
@@ -756,6 +1016,21 @@ else if (_loading)
 
     private sealed record UploadResult(int Status, string? Body);
 
+    /// <summary>An upload's answer, which is the week or the list it went to, as it now stands.</summary>
+    private bool Apply(ShoppingScope scope, string body)
+    {
+        var options = System.Text.Json.JsonSerializerOptions.Web;
+
+        if (scope.IsWeek)
+        {
+            _session = System.Text.Json.JsonSerializer.Deserialize<ShoppingSession>(body, options) ?? _session;
+            return _session is not null;
+        }
+
+        _content = System.Text.Json.JsonSerializer.Deserialize<ShoppingListContent>(body, options) ?? _content;
+        return _content is not null;
+    }
+
     private void OnLightboxKey(KeyboardEventArgs args)
     {
         if (args.Key is "Escape" or "Enter" or " ")
@@ -768,12 +1043,12 @@ else if (_loading)
     [JSInvokable]
     public async Task HandleSort(int from, int to)
     {
-        if (_week is not { } week || _session?.Items.FirstOrDefault(i => i.Ordinal == from) is not { } item)
+        if (Scope is not { } scope || Items.FirstOrDefault(i => i.Ordinal == from) is not { } item)
         {
             return;
         }
 
-        await ApplyAsync(() => Client.MoveItemAsync(week, item, to));
+        await ApplyAsync(() => Client.MoveItemAsync(scope, item, to));
         StateHasChanged();
     }
 

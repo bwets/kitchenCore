@@ -209,6 +209,17 @@
     overflow-wrap: anywhere;
   }
 
+  // Retitling in place: the input takes the title's room, the buttons stay small.
+  &__rename {
+    display: flex;
+    flex: 1 1 auto;
+    gap: $space-2;
+    min-width: 0;
+
+    .field__input { flex: 1 1 auto; min-width: 0; min-height: 2.25rem; }
+    .button { flex: none; min-height: 2.25rem; padding: 0 $space-3; }
+  }
+
   &__by {
     flex: none;
     padding: 0 $space-2;
@@ -216,22 +227,6 @@
     background: var(--surface-container-high);
     color: var(--on-surface-variant);
     font-size: 0.72rem;
-  }
-
-  &__remove {
-    flex: none;
-    width: 2rem;
-    height: 2rem;
-    border: 0;
-    border-radius: $radius-full;
-    background: transparent;
-    color: var(--on-surface-variant);
-    font-size: 1.1rem;
-
-    &:hover {
-      background: var(--error-container);
-      color: var(--on-error-container);
-    }
   }
 
   &.is-done &__title {
@@ -412,12 +407,50 @@
 
   &__danger { color: var(--error) !important; }
 
+  // A heading inside the menu: "Move to", above the other lists.
+  &__group {
+    padding: $space-2 $space-3 $space-1;
+    border-top: 1px solid var(--outline-variant);
+    color: var(--on-surface-variant);
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+
+  // Not enough room below: js/ui.js placeMenu opens it upwards.
+  &.is-up {
+    top: auto;
+    bottom: calc(100% + 4px);
+  }
+
+  // On a phone, a bottom sheet like the dialogs: always on screen whatever row
+  // it came from, and within reach of a thumb.
+  @media (max-width: $bp-tablet) {
+    position: fixed;
+    inset: auto 0 0 0;
+    max-height: 70vh;
+    overflow-y: auto;
+    padding: $space-2 $space-2 calc(#{$space-2} + env(safe-area-inset-bottom));
+    border-radius: $radius-lg $radius-lg 0 0;
+
+    &.is-up {
+      top: auto;
+      bottom: 0;
+    }
+
+    button { padding: $space-3 $space-4; }
+  }
+
   // A click anywhere else closes the menu.
   &__scrim {
     position: fixed;
     inset: 0;
     z-index: 30;
   }
+}
+
+// The sheet needs its backdrop to read as one.
+@media (max-width: $bp-tablet) {
+  .item-menu__scrim { background: rgba(0, 0, 0, 0.3); }
 }
 
 .suggest__option {
@@ -504,5 +537,57 @@
     font-size: 1.6rem;
     line-height: 1;
     cursor: pointer;
+  }
+}
+
+// An ad hoc list has no trip card: the list takes the whole width, up to a
+// comfortable line length.
+.shopping--single {
+  grid-template-columns: minmax(0, 48rem);
+}
+
+.shopping__head-actions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: $space-2;
+}
+
+// One tab per shop. Links rather than buttons: each list has its own URL.
+.list-tabs {
+  display: flex;
+  gap: $space-1;
+  margin-bottom: $space-3;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--outline-variant);
+
+  &__tab {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    gap: $space-2;
+    min-height: 2.75rem;
+    padding: 0 $space-4;
+    border-bottom: 3px solid transparent;
+    color: var(--on-surface-variant);
+    font-weight: 600;
+    text-decoration: none;
+
+    &:hover { color: var(--on-surface); }
+
+    &.is-active {
+      border-bottom-color: var(--primary);
+      color: var(--primary);
+    }
+  }
+
+  &__count {
+    min-width: 1.4rem;
+    padding: 0 $space-1;
+    border-radius: $radius-full;
+    background: var(--secondary-container);
+    color: var(--on-secondary-container);
+    font-size: 0.75rem;
+    text-align: center;
   }
 }

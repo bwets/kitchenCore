@@ -78,8 +78,18 @@
     min-width: 0;
   }
 
+  // A button, opening the entry's details, that reads as the dish's name.
   &__title {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
     font-weight: 500;
+    text-align: left;
+    cursor: pointer;
+
+    &:hover { text-decoration: underline; }
 
     // Several titles in one slot is the flagged duplicate state; separate them
     // visibly rather than letting them read as one dish.
@@ -87,6 +97,13 @@
       padding-left: $space-3;
       border-left: 2px solid var(--error);
     }
+  }
+
+  // Something more to read: the details have notes or links.
+  &__more {
+    margin-left: $space-1;
+    color: var(--on-surface-variant);
+    font-size: 0.8rem;
   }
 
   &__empty {

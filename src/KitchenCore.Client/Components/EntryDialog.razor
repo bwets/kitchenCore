@@ -17,7 +17,11 @@
 {
     <div class="dialog-scrim" @onclick="Cancel"></div>
 
-    <div class="dialog" role="dialog" aria-modal="true" aria-label="@Heading()">
+    @* Wide, with the notes in a column of their own, when there are notes to
+       read: a recipe beside its title rather than under it. The notes are the
+       only part that scrolls, so the title and the buttons stay in view. *@
+    <div class="dialog dialog--entry @(_split ? "dialog--split" : null)"
+         role="dialog" aria-modal="true" aria-label="@Heading()">
         <header class="dialog__head">
             <div>
                 <h2 class="dialog__title">@Heading()</h2>
@@ -25,83 +29,90 @@
             </div>
         </header>
 
-        @if (!CanEdit)
-        {
-            @* A disabled input still looks like a control that ought to work,
-               which is a worse lie than plain text. A viewer gets values. *@
-            <div class="field">
-                <span class="field__label">@L["Entry_Title"]</span>
-                <div class="field__value">@_title</div>
+        <div class="entry-body">
+            <div class="entry-body__main">
+                @if (!CanEdit)
+                {
+                    @* A disabled input still looks like a control that ought to work,
+                       which is a worse lie than plain text. A viewer gets values. *@
+                    <div class="field">
+                        <span class="field__label">@L["Entry_Title"]</span>
+                        <div class="field__value">@_title</div>
+                    </div>
+                }
+                else
+                {
+                    <label class="field">
+                        <span class="field__label">@L["Entry_Title"]</span>
+                        <input class="field__input"
+                               list="known-titles"
+                               @ref="_titleField"
+                               value="@_title"
+                               @oninput="e => _title = e.Value?.ToString() ?? string.Empty"
+                               @onkeydown="OnKeyDown" />
+                    </label>
+                }
+
+                @* Every title already used, so repeating a favourite is a couple of
+                   keystrokes rather than retyping it. *@
+                <datalist id="known-titles">
+                    @foreach (var title in _knownTitles)
+                    {
+                        <option value="@title"></option>
+                    }
+                </datalist>
+
+                @if (!CanEdit)
+                {
+                    @if (Target?.Entry.Links.Count > 0)
+                    {
+                        <div class="field">
+                            <span class="field__label">@L["Entry_Links"]</span>
+                            <ul class="field__links">
+                                @foreach (var link in Target.Entry.Links)
+                                {
+                                    <li><a href="@link" target="_blank" rel="noopener noreferrer">@link</a></li>
+                                }
+                            </ul>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <label class="field">
+                        <span class="field__label">@L["Entry_Links"]</span>
+                        <textarea class="field__input field__input--area"
+                                  rows="2"
+                                  placeholder="https://..."
+                                  value="@_links"
+                                  @oninput="e => _links = e.Value?.ToString() ?? string.Empty"></textarea>
+                        <span class="field__hint">@L["Entry_LinksHint"]</span>
+                    </label>
+                }
             </div>
-        }
-        else
-        {
-            <label class="field">
-                <span class="field__label">@L["Entry_Title"]</span>
-                <input class="field__input"
-                       list="known-titles"
-                       @ref="_titleField"
-                       value="@_title"
-                       @oninput="e => _title = e.Value?.ToString() ?? string.Empty"
-                       @onkeydown="OnKeyDown" />
-            </label>
-        }
 
-        @* Every title already used, so repeating a favourite is a couple of
-           keystrokes rather than retyping it. *@
-        <datalist id="known-titles">
-            @foreach (var title in _knownTitles)
+            @if (!CanEdit)
             {
-                <option value="@title"></option>
+                @if (_split)
+                {
+                    <div class="field entry-body__notes">
+                        <span class="field__label">@L["Entry_Notes"]</span>
+                        <div class="field__value entry-body__scroll"><MarkdownText Text="@_notes" /></div>
+                    </div>
+                }
             }
-        </datalist>
-
-        @if (!CanEdit)
-        {
-            <div class="field">
-                <span class="field__label">@L["Entry_Notes"]</span>
-                <div class="field__value"><MarkdownText Text="@_notes" /></div>
-            </div>
-        }
-        else
-        {
-            <label class="field">
-                <span class="field__label">@L["Entry_Notes"]</span>
-                <textarea class="field__input field__input--area"
-                          rows="3"
-                          value="@_notes"
-                          @oninput="e => _notes = e.Value?.ToString() ?? string.Empty"></textarea>
-                <span class="field__hint">@L["Entry_NotesHint"]</span>
-            </label>
-        }
-
-        @if (!CanEdit)
-        {
-            @if (Target?.Entry.Links.Count > 0)
+            else
             {
-                <div class="field">
-                    <span class="field__label">@L["Entry_Links"]</span>
-                    <ul class="field__links">
-                        @foreach (var link in Target.Entry.Links)
-                        {
-                            <li><a href="@link" target="_blank" rel="noopener noreferrer">@link</a></li>
-                        }
-                    </ul>
-                </div>
+                <label class="field entry-body__notes">
+                    <span class="field__label">@L["Entry_Notes"]</span>
+                    <textarea class="field__input field__input--area entry-body__scroll"
+                              rows="12"
+                              value="@_notes"
+                              @oninput="e => _notes = e.Value?.ToString() ?? string.Empty"></textarea>
+                    <span class="field__hint">@L["Entry_NotesHint"]</span>
+                </label>
             }
-        }
-        else
-        {
-            <label class="field">
-                <span class="field__label">@L["Entry_Links"]</span>
-                <textarea class="field__input field__input--area"
-                          rows="2"
-                          placeholder="https://..."
-                          value="@_links"
-                          @oninput="e => _links = e.Value?.ToString() ?? string.Empty"></textarea>
-                <span class="field__hint">@L["Entry_LinksHint"]</span>
-            </label>
-        }
+        </div>
 
         @if (_error is { Length: > 0 })
         {
@@ -137,6 +148,7 @@
     private string _title = string.Empty;
     private string _notes = string.Empty;
     private string _links = string.Empty;
+    private bool _split;
     private string? _error;
     private bool _busy;
     private IReadOnlyList<string> _knownTitles = [];
@@ -185,6 +197,11 @@
 
             _title = Target?.Entry.Title ?? string.Empty;
             _notes = Target?.Entry.Notes ?? string.Empty;
+
+            // Creating and editing always have the notes column, since that is
+            // where they get written; reading has it when there is something to
+            // read. Decided on opening, so the layout never jumps while typing.
+            _split = CanEdit || !string.IsNullOrWhiteSpace(_notes);
             _links = Target is null ? string.Empty : string.Join('\n', Target.Entry.Links);
         }
 

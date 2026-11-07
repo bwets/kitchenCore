@@ -135,6 +135,64 @@ public sealed record ShoppingScheduleUpdate
     public string? Channel { get; init; }
 }
 
+/// <summary>
+/// One shopping list, one tab: "Auchan", "Delhaize", "Autres". Defined in
+/// config like the meal slots, so a new shop is a config line, not a code change.
+///
+/// The weekly list is the one with an order and a delivery, kept as one list per
+/// week in the year files. The others are ad hoc: a single running list each, in
+/// <c>data/shopping/lists/{key}.yaml</c>, bought whenever somebody passes the shop.
+/// </summary>
+public sealed record ShoppingListDefinition
+{
+    /// <summary>Stable key: the file name and the URL. Lower-case letters, digits and dashes.</summary>
+    public required string Key { get; init; }
+
+    /// <summary>Display label per culture code ("fr", "en"). Falls back to <see cref="Key"/>.</summary>
+    public Dictionary<string, string> Labels { get; init; } = [];
+
+    /// <summary>Has the weekly order and delivery. At most one list does.</summary>
+    public bool Weekly { get; init; }
+
+    public string Label(string culture) =>
+        Labels.TryGetValue(culture, out var label) ? label : Key;
+
+    public static bool IsValidKey(string? key) =>
+        key is { Length: > 0 and <= 40 } && key.All(c => c is (>= 'a' and <= 'z') or (>= '0' and <= '9') or '-');
+}
+
+/// <summary>A list's tab: what it is, and how many things are still to get on it.</summary>
+public sealed record ShoppingListSummary
+{
+    public required ShoppingListDefinition List { get; init; }
+
+    /// <summary>Open items: on the weekly list, those of the session new items go to.</summary>
+    public int Open { get; init; }
+}
+
+/// <summary>An ad hoc list as it stands. No dates: it is bought whenever.</summary>
+public sealed record ShoppingListContent
+{
+    public required string Key { get; init; }
+
+    public IReadOnlyList<ShoppingItem> Items { get; init; } = [];
+}
+
+/// <summary>Body for retitling an item: the referenced item gets <see cref="NewTitle"/>.</summary>
+public sealed record ShoppingItemRename : ShoppingItemRef
+{
+    public required string NewTitle { get; init; }
+}
+
+/// <summary>
+/// Body for moving an item onto another list, by that list's key. Onto the
+/// weekly list means onto the session new items go to.
+/// </summary>
+public sealed record ShoppingItemTransfer : ShoppingItemRef
+{
+    public required string To { get; init; }
+}
+
 /// <summary>Body for adding an item.</summary>
 public sealed record NewShoppingItem
 {
