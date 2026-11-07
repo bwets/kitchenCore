@@ -1,17 +1,21 @@
 @use "tokens" as *;
 
+// Centred and capped: on a wide monitor seven day columns stretched edge to edge
+// read as a spreadsheet.
 .app-main {
-  padding: $space-4;
+  max-width: 90rem;
+  margin: 0 auto;
+  padding: $space-5 $space-6 $space-6;
 
   @media (max-width: $bp-tablet) {
     padding: $space-3;
   }
 }
 
-// M3 tonal card: elevation as a tint step, not a shadow.
+// Tonal card: elevation as a tint step, not a shadow.
 .panel {
   padding: $space-5;
-  background: var(--surface-container-lowest);
+  background: var(--surface-container-low);
   border: 1px solid var(--outline-variant);
   border-radius: $radius-lg;
 

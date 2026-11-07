@@ -12,10 +12,12 @@ $theme-darcula: (
   secondary-container:    #3b4a33,
   on-secondary-container: #d5e8c8,
 
-  tertiary:               #9876aa,
-  on-tertiary:            #1e1e1e,
-  tertiary-container:     #4a3a55,
-  on-tertiary-container:  #e4d5ed,
+  // Darcula's yellow rather than its purple: counts and waiting things are
+  // saffron in every theme.
+  tertiary:               #ffc66d,
+  on-tertiary:            #2b2b2b,
+  tertiary-container:     #5a4a2a,
+  on-tertiary-container:  #ffe7c2,
 
   error:                  #ff6b68,
   on-error:               #2b2b2b,
@@ -38,6 +40,7 @@ $theme-darcula: (
   shadow-2: (0 4px 14px rgba(0, 0, 0, 0.6)),
   marker-order: #6897bb,
   marker-delivery: #6a8759,
+  on-marker: #1e1e1e,
 
 
   slot-0-container: #3b4a33, slot-0-on: #d5e8c8, slot-0-accent: #6a8759,

@@ -75,15 +75,22 @@ public sealed class ShoppingConfig
 
             var weekly = lists.FirstOrDefault(l => l.Weekly);
 
-            return [.. lists.Select(l => l.Weekly && !ReferenceEquals(l, weekly) ? l with { Weekly = false } : l)];
+            return
+            [
+                .. lists.Select(l => l with
+                {
+                    Weekly = l.Weekly && ReferenceEquals(l, weekly),
+                    Color = ShoppingListDefinition.IsValidColor(l.Color) ? l.Color : null,
+                }),
+            ];
         }
     }
 
     private static List<ShoppingListDefinition> DefaultLists() =>
     [
-        new() { Key = "auchan", Weekly = true, Labels = { ["fr"] = "Auchan", ["en"] = "Auchan" } },
-        new() { Key = "delhaize", Labels = { ["fr"] = "Delhaize", ["en"] = "Delhaize" } },
-        new() { Key = "others", Labels = { ["fr"] = "Autres", ["en"] = "Others" } },
+        new() { Key = "auchan", Weekly = true, Color = "#e2001a", Icon = "cart", Labels = { ["fr"] = "Auchan", ["en"] = "Auchan" } },
+        new() { Key = "delhaize", Color = "#f2b600", Icon = "basket", Labels = { ["fr"] = "Delhaize", ["en"] = "Delhaize" } },
+        new() { Key = "others", Icon = "bag", Labels = { ["fr"] = "Autres", ["en"] = "Others" } },
     ];
 }
 

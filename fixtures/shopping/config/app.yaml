@@ -42,11 +42,17 @@ shopping:
 
   # One tab per list, in this order; the first is where the page opens. The
   # weekly one has the order and delivery above; the others are bought whenever.
+  # color (#rrggbb) and icon (cart, basket, bag, store) mark each tab.
   lists:
     - key: auchan
       weekly: true
+      color: "#e2001a"
+      icon: cart
       labels: { fr: Auchan, en: Auchan }
     - key: delhaize
+      color: "#f2b600"
+      icon: basket
       labels: { fr: Delhaize, en: Delhaize }
     - key: others
+      icon: bag
       labels: { fr: Autres, en: Others }

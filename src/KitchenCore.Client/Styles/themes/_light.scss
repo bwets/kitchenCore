@@ -1,49 +1,52 @@
-// Default light theme. Material You roles seeded on a warm kitchen green.
+// Default light theme. The dark theme's counterpart: warm paper greys rather
+// than cool ones, a deep sage for the brand, and saffron (tertiary, a darker
+// shade so white text holds on it) for counts and things waiting on somebody.
+// Cards sit a step off the page; rows inside them a step further.
 $theme-light: (
   color-scheme: light,
 
-  primary:                #3c6b4f,
+  primary:                #2f6b47,
   on-primary:             #ffffff,
-  primary-container:      #bff0cf,
-  on-primary-container:   #00210f,
+  primary-container:      #cdebd6,
+  on-primary-container:   #0d2416,
 
   secondary:              #a84b3c,
   on-secondary:           #ffffff,
   secondary-container:    #ffdad3,
   on-secondary-container: #3b0a04,
 
-  tertiary:               #7a5a1e,
+  tertiary:               #8a6414,
   on-tertiary:            #ffffff,
-  tertiary-container:     #ffdfa6,
-  on-tertiary-container:  #281900,
+  tertiary-container:     #ffe2a4,
+  on-tertiary-container:  #2a1d00,
 
   error:                  #b3261e,
   on-error:               #ffffff,
   error-container:        #f9dedc,
   on-error-container:     #410e0b,
 
-  surface:                    #f8faf6,
+  surface:                    #f6f5ef,
   surface-container-lowest:   #ffffff,
-  surface-container-low:      #f2f5ef,
-  surface-container:          #ecefe9,
-  surface-container-high:     #e6e9e3,
-  surface-container-highest:  #e0e4dd,
+  surface-container-low:      #fbfaf6,
+  surface-container:          #efeee7,
+  surface-container-high:     #ebeae2,
+  surface-container-highest:  #e2e1d8,
 
-  on-surface:          #191d18,
-  on-surface-variant:  #5a6157,
-  outline:             #8a9186,
-  outline-variant:     #d5dbd1,
+  on-surface:          #1b1d19,
+  on-surface-variant:  #575c53,
+  outline:             #8a8f84,
+  outline-variant:     #dddcd2,
 
-  shadow-1: (0 1px 2px rgba(0, 0, 0, 0.10), 0 1px 3px rgba(0, 0, 0, 0.06)),
-  shadow-2: (0 2px 6px rgba(0, 0, 0, 0.12), 0 6px 16px rgba(0, 0, 0, 0.08)),
+  shadow-1: (0 1px 2px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.05)),
+  shadow-2: (0 10px 30px rgba(30, 30, 20, 0.14)),
   marker-order: #2f6bbf,
   marker-delivery: #2f8f52,
+  on-marker: #ffffff,
 
-
-  slot-0-container: #bff0cf, slot-0-on: #00210f, slot-0-accent: #4c8a63,
-  slot-1-container: #ffdfa6, slot-1-on: #281900, slot-1-accent: #a3822f,
-  slot-2-container: #d5e3ff, slot-2-on: #001b3d, slot-2-accent: #4d6a9c,
-  slot-3-container: #ffdad3, slot-3-on: #3b0a04, slot-3-accent: #b3574a,
+  slot-0-container: #cdebd6, slot-0-on: #0d2416, slot-0-accent: #3f8a5c,
+  slot-1-container: #ffe2a4, slot-1-on: #2a1d00, slot-1-accent: #b0821f,
+  slot-2-container: #d9e5fb, slot-2-on: #0f1f3d, slot-2-accent: #4d6fae,
+  slot-3-container: #ffdad3, slot-3-on: #3b0a04, slot-3-accent: #b9573f,
   slot-4-container: #e8ddff, slot-4-on: #21005d, slot-4-accent: #7a5ea8,
-  slot-5-container: #c9efe9, slot-5-on: #00201c, slot-5-accent: #4c8a80,
+  slot-5-container: #c9efe9, slot-5-on: #00201c, slot-5-accent: #3f8a80,
 );

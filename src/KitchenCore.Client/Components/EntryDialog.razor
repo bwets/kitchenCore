@@ -1,6 +1,7 @@
 @implements IAsyncDisposable
 @inject MenuClient Menu
 @inject AuthService Auth
+@inject SystemStatusService Status
 @inject UiInterop Ui
 @inject IStringLocalizer<Strings> L
 
@@ -20,27 +21,25 @@
     @* Wide, with the notes in a column of their own, when there are notes to
        read: a recipe beside its title rather than under it. The notes are the
        only part that scrolls, so the title and the buttons stay in view. *@
-    <div class="dialog dialog--entry @(_split ? "dialog--split" : null)"
+    <div class="dialog dialog--entry @(_split ? "dialog--split" : null) @SlotTone.CssClass(Target.Slot)"
          role="dialog" aria-modal="true" aria-label="@Heading()">
-        <header class="dialog__head">
-            <div>
-                <h2 class="dialog__title">@Heading()</h2>
-                <p class="dialog__subtitle">@SubHeading()</p>
+        @* Reading, the dish is the heading; editing, the heading says what is
+           being done and the title is a field like the rest. *@
+        <header class="dialog__head entry-head">
+            <div class="entry-head__text">
+                <p class="slot-tag entry-head__when">
+                    <span class="slot-tag__swatch" aria-hidden="true"></span>
+                    @SubHeading()
+                </p>
+                <h2 class="dialog__title entry-head__title">@(CanEdit ? Heading() : _title)</h2>
             </div>
+            <button type="button" class="entry-head__close" aria-label="@L["Close"]" title="@L["Close"]" @onclick="Cancel">×</button>
         </header>
 
-        <div class="entry-body">
+        @* Reading a recipe with no links, the notes take the whole width. *@
+        <div class="entry-body @(!CanEdit && Target.Entry.Links.Count == 0 ? "entry-body--notes-only" : null)">
             <div class="entry-body__main">
-                @if (!CanEdit)
-                {
-                    @* A disabled input still looks like a control that ought to work,
-                       which is a worse lie than plain text. A viewer gets values. *@
-                    <div class="field">
-                        <span class="field__label">@L["Entry_Title"]</span>
-                        <div class="field__value">@_title</div>
-                    </div>
-                }
-                else
+                @if (CanEdit)
                 {
                     <label class="field">
                         <span class="field__label">@L["Entry_Title"]</span>
@@ -66,15 +65,23 @@
                 {
                     @if (Target?.Entry.Links.Count > 0)
                     {
-                        <div class="field">
-                            <span class="field__label">@L["Entry_Links"]</span>
-                            <ul class="field__links">
-                                @foreach (var link in Target.Entry.Links)
-                                {
-                                    <li><a href="@link" target="_blank" rel="noopener noreferrer">@link</a></li>
-                                }
-                            </ul>
-                        </div>
+                        @* A card per link, named by its site: a long URL is noise. *@
+                        <ul class="link-cards" aria-label="@L["Entry_Links"]">
+                            @foreach (var link in Target.Entry.Links)
+                            {
+                                <li>
+                                    <a class="link-card" href="@link" target="_blank" rel="noopener noreferrer" title="@link">
+                                        <span class="link-card__icon" aria-hidden="true">
+                                            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1" /></svg>
+                                        </span>
+                                        <span class="link-card__text">
+                                            <span class="link-card__site">@Site(link)</span>
+                                            <span class="link-card__url">@link</span>
+                                        </span>
+                                    </a>
+                                </li>
+                            }
+                        </ul>
                     }
                 }
                 else
@@ -95,10 +102,9 @@
             {
                 @if (_split)
                 {
-                    <div class="field entry-body__notes">
-                        <span class="field__label">@L["Entry_Notes"]</span>
-                        <div class="field__value entry-body__scroll"><MarkdownText Text="@_notes" /></div>
-                    </div>
+                    <section class="field entry-body__notes" aria-label="@L["Entry_Notes"]">
+                        <div class="entry-body__scroll entry-body__read"><MarkdownText Text="@_notes" /></div>
+                    </section>
                 }
             }
             else
@@ -327,7 +333,19 @@
 
     private string Heading() => IsExisting ? L["Entry_Edit"] : L["Entry_New"];
 
+    /// <summary>"youtube.com" for https://www.youtube.com/watch?v=…; the link itself when it does not parse.</summary>
+    private static string Site(string link) =>
+        Uri.TryCreate(link, UriKind.Absolute, out var uri) && uri.Host.Length > 0
+            ? (uri.Host.StartsWith("www.", StringComparison.OrdinalIgnoreCase) ? uri.Host[4..] : uri.Host)
+            : link;
+
     private string SubHeading() => Target is null
         ? string.Empty
-        : $"{Target.Date.ToString("dddd d MMMM")} · {Target.Slot}";
+        : $"{Target.Date.ToString("dddd d MMMM")} · {SlotLabel(Target.Slot)}";
+
+    /// <summary>The slot as the family named it in config, not its key. Status is loaded long before any dialog opens.</summary>
+    private string SlotLabel(string key) =>
+        Status.Current?.Slots.FirstOrDefault(s => string.Equals(s.Key, key, StringComparison.OrdinalIgnoreCase))
+            ?.Label(System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName)
+        ?? key;
 }

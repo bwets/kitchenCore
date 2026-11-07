@@ -125,6 +125,8 @@ These are settled; don't relitigate them without a reason.
 - **Slots are aligned rows.** The week is ONE CSS grid (days = columns, slots =
   rows), not seven per-day stacks -- those misalign the moment a day skips a slot
   or holds two. Every day renders every slot; empty cells are the "add here" target.
+  On a phone (no cross-day alignment to keep) the same cells render as a list of
+  day cards instead; `MenuGrid` draws both through one `CellBody`, CSS shows one.
 - **Git is detected, not configured.** Enabled iff `.git` sits *directly* at the
   data root. Deliberately does not walk up to an ancestor repo: otherwise pointing
   a launch profile at `fixtures/basic/data` would find KitchenCore's own source
@@ -242,10 +244,10 @@ Both are **predicted** until the order is actually placed, at which point they
 become confirmed. The UI has to show which of the two it is: a predicted date
 is a plan, a confirmed one is a commitment.
 
-Both appear on the menu calendar as a horizontal line across the day, positioned
-by time of day: **blue for the order deadline, green for the delivery.** They are
-markers on the week and multi-week grids, not menu entries, so they draw over the
-day column rather than occupying a slot. (Implemented with the week grid in S3/S4;
+Both appear on the menu calendar as a pill in the slot their time of day falls in
+("20:00 Order by" against dinner): **blue for the order deadline, green for the
+delivery.** They are markers on the week and multi-week grids, not menu entries,
+so they sit above the slot's meal rather than occupying it. (Implemented with the week grid in S3/S4;
 the model exists now so the home card and the grid agree.)
 
 ## Frontend conventions

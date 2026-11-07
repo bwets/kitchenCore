@@ -1,21 +1,19 @@
 @use "tokens" as *;
 
-.cards {
-  display: grid;
-  gap: $space-4;
-  grid-template-columns: repeat(auto-fit, minmax(19rem, 1fr));
-  align-items: start;
-}
-
 .card {
-  padding: $space-5;
-  background: var(--surface-container-lowest);
+  padding: $space-5 $space-6;
+  background: var(--surface-container-low);
   border: 1px solid var(--outline-variant);
-  border-radius: $radius-lg;
+  border-radius: $radius-xl;
+
+  @media (max-width: $bp-tablet) {
+    padding: $space-4;
+    border-radius: $radius-lg;
+  }
 
   &__head {
     display: flex;
-    align-items: flex-start;
+    align-items: baseline;
     justify-content: space-between;
     gap: $space-3;
     margin-bottom: $space-4;
@@ -23,39 +21,255 @@
 
   &__title {
     margin: 0;
-    font-size: 1.05rem;
+    font-size: 1.4rem;
   }
 
-  &__subtitle {
-    margin: $space-1 0 0;
+  &__meta {
     color: var(--on-surface-variant);
     font-size: 0.85rem;
-    text-transform: capitalize;
   }
 
-  &__action {
+  // "Open the week →": a plain link in the brand colour, not a button.
+  &__link {
     flex: none;
-    padding: $space-1 $space-3;
-    border-radius: $radius-full;
-    background: var(--primary-container);
-    color: var(--on-primary-container);
-    font-size: 0.8rem;
+    color: var(--primary);
+    font-size: 0.88rem;
     font-weight: 600;
     text-decoration: none;
     white-space: nowrap;
-  }
 
-  &__note {
-    margin: $space-4 0 0;
-    color: var(--on-surface-variant);
-    font-size: 0.78rem;
-    line-height: 1.4;
+    &:hover { text-decoration: underline; }
   }
 }
 
-// Today's menu: one row per configured slot, empty ones included, so the shape
-// of the day is the same every morning.
-.today {
+// The dashboard.
+.home {
+  max-width: 78rem;
+  margin: 0 auto;
+  padding-top: $space-4;
+
+  &__head { margin-bottom: $space-5; }
+
+  &__date {
+    margin: 0 0 $space-1;
+    color: var(--on-surface-variant);
+    font-weight: 500;
+    @include sentence-case;
+  }
+
+  &__greeting {
+    margin: 0;
+    font-size: 2.6rem;
+    letter-spacing: -0.02em;
+
+    @media (max-width: $bp-tablet) { font-size: 1.9rem; }
+  }
+
+  // Today beside shopping on a wide screen, one above the other on a phone.
+  &__columns {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $space-5;
+    align-items: flex-start;
+  }
+
+  &__today {
+    flex: 999 1 34rem;
+    min-width: 0;
+  }
+
+  &__side {
+    flex: 1 1 22rem;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: $space-5;
+  }
+
+  &__tomorrow {
+    margin: $space-4 0 0;
+    color: var(--on-surface-variant);
+    font-size: 0.9rem;
+
+    strong { color: var(--on-surface); font-weight: 600; }
+  }
+}
+
+// A slot's name with its colour, as a small uppercase tag.
+.slot-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-2;
+  color: var(--on-surface-variant);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+
+  &__swatch {
+    width: 0.55rem;
+    height: 0.55rem;
+    border-radius: 3px;
+    background: var(--slot-accent);
+  }
+}
+
+// Today's main meal: the big card the dashboard is opened for.
+.hero {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: $space-3;
+  width: 100%;
+  padding: $space-5;
+  border: 0;
+  border-radius: $radius-lg;
+  background: var(--slot-container);
+  color: var(--slot-on-container);
+  text-align: left;
+
+  &:hover { filter: brightness(1.08); }
+
+  .slot-tag { color: inherit; opacity: 0.85; }
+
+  &__top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  &__hint {
+    font-size: 0.8rem;
+    opacity: 0.85;
+  }
+
+  &__title {
+    font-family: $font-display;
+    font-size: 2rem;
+    font-weight: 600;
+    line-height: 1.1;
+    letter-spacing: -0.015em;
+  }
+
+  &__summary {
+    font-size: 0.92rem;
+    line-height: 1.5;
+    opacity: 0.85;
+  }
+
+  &__more {
+    color: var(--slot-accent);
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+}
+
+// The day's other slots, small.
+.meal-tiles {
+  margin: $space-3 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: $space-3;
+}
+
+.meal-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: $space-2;
+  padding: $space-4;
+  border-radius: $radius-lg;
+  background: var(--surface-container-high);
+
+  &__title {
+    min-height: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--on-surface);
+    font-size: 1rem;
+    font-weight: 500;
+    text-align: left;
+
+    &:hover { text-decoration: underline; }
+  }
+
+  &__empty {
+    color: var(--on-surface-variant);
+    font-size: 0.9rem;
+  }
+}
+
+// The next order and delivery, as two steps joined by a line.
+.timeline {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  &__step {
+    position: relative;
+    display: flex;
+    gap: $space-3;
+    padding-bottom: $space-4;
+
+    &:last-child { padding-bottom: 0; }
+
+    // The line down to the next step.
+    &:not(:last-child)::after {
+      content: "";
+      position: absolute;
+      left: calc(0.375rem - 1px);
+      top: 1rem;
+      bottom: 0;
+      width: 2px;
+      background: var(--outline-variant);
+    }
+  }
+
+  &__dot {
+    flex: none;
+    width: 0.75rem;
+    height: 0.75rem;
+    margin-top: 0.2rem;
+    border: 3px solid var(--marker-order);
+    border-radius: 50%;
+  }
+
+  &__step--delivery &__dot { border-color: var(--marker-delivery); }
+
+  &__text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  &__label {
+    color: var(--marker-order);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  &__step--delivery &__label { color: var(--marker-delivery); }
+
+  &__when {
+    font-size: 1.02rem;
+    font-weight: 600;
+    @include sentence-case;
+  }
+
+  &__state {
+    color: var(--on-surface-variant);
+    font-size: 0.78rem;
+  }
+}
+
+// What is still to get, per list.
+.list-counts {
   margin: 0;
   padding: 0;
   list-style: none;
@@ -65,93 +279,23 @@
   &__row {
     display: flex;
     align-items: center;
-    gap: $space-3;
-    padding: $space-2;
+    justify-content: space-between;
+    min-height: 2.9rem;
+    padding: 0 $space-4;
     border-radius: $radius-md;
-    background: var(--surface-container-low);
-  }
-
-  &__titles {
-    display: flex;
-    flex-wrap: wrap;
-    gap: $space-1 $space-3;
-    min-width: 0;
-  }
-
-  // A button, opening the entry's details, that reads as the dish's name.
-  &__title {
-    padding: 0;
-    border: 0;
-    background: none;
-    color: inherit;
-    font: inherit;
+    background: var(--surface-container-high);
+    color: var(--on-surface);
     font-weight: 500;
-    text-align: left;
-    cursor: pointer;
+    text-decoration: none;
 
-    &:hover { text-decoration: underline; }
-
-    // Several titles in one slot is the flagged duplicate state; separate them
-    // visibly rather than letting them read as one dish.
-    & + & {
-      padding-left: $space-3;
-      border-left: 2px solid var(--error);
-    }
+    &:hover { background: var(--surface-container-highest); }
   }
 
-  // Something more to read: the details have notes or links.
-  &__more {
-    margin-left: $space-1;
-    color: var(--on-surface-variant);
-    font-size: 0.8rem;
-  }
-
-  &__empty {
-    color: var(--on-surface-variant);
-    font-size: 0.9rem;
-  }
-}
-
-// The two shopping moments. The coloured rule is the same language the week grid
-// uses for its markers: blue for the order deadline, green for the delivery.
-.moments {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  display: grid;
-  gap: $space-3;
-}
-
-.moment {
-  display: flex;
-  align-items: center;
-  gap: $space-3;
-  padding-left: $space-3;
-  position: relative;
-
-  &__rule {
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: 3px;
-    border-radius: 3px;
-  }
-
-  &--order &__rule { background: var(--marker-order); }
-
-  &--delivery &__rule { background: var(--marker-delivery); }
-
-  &__label {
-    min-width: 5.5rem;
-    color: var(--on-surface-variant);
-    font-size: 0.85rem;
-  }
-
-  &__when {
+  &__count {
+    color: var(--primary);
     font-weight: 600;
-    font-variant-numeric: tabular-nums;
-    text-transform: capitalize;
+
+    &.is-zero { color: var(--on-surface-variant); font-weight: 500; }
   }
 }
 
@@ -204,7 +348,7 @@
   color: var(--on-surface-variant);
   font-size: 0.75rem;
   font-weight: 600;
-  text-transform: capitalize;
+  @include sentence-case;
 }
 
 .week-bar__weeks {
@@ -240,7 +384,7 @@
   font-size: 0.85rem;
   font-weight: 650;
   text-align: left;
-  text-transform: capitalize;
+  @include sentence-case;
 
   &:hover { background: var(--surface-container); }
 }
@@ -283,7 +427,7 @@
   padding-top: 2px;
   color: var(--on-surface-variant);
   font-size: 0.8rem;
-  text-transform: capitalize;
+  @include sentence-case;
 
   &.is-today {
     color: var(--primary);
@@ -529,6 +673,8 @@
     background: var(--surface-container-low);
     color: var(--on-surface-variant);
     font-size: 0.78rem;
+    // A flex box, where ::first-letter does nothing; the day abbreviation is one
+    // word, so capitalize is right here.
     text-transform: capitalize;
 
     &.is-today {

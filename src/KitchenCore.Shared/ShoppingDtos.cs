@@ -154,11 +154,23 @@ public sealed record ShoppingListDefinition
     /// <summary>Has the weekly order and delivery. At most one list does.</summary>
     public bool Weekly { get; init; }
 
+    /// <summary>
+    /// The shop's colour, "#rrggbb", behind its icon on the tab. Optional; only
+    /// that exact shape is passed on, since it ends up in a style attribute.
+    /// </summary>
+    public string? Color { get; init; }
+
+    /// <summary>cart, basket, bag or store. Anything else draws the bag.</summary>
+    public string? Icon { get; init; }
+
     public string Label(string culture) =>
         Labels.TryGetValue(culture, out var label) ? label : Key;
 
     public static bool IsValidKey(string? key) =>
         key is { Length: > 0 and <= 40 } && key.All(c => c is (>= 'a' and <= 'z') or (>= '0' and <= '9') or '-');
+
+    public static bool IsValidColor(string? color) =>
+        color is { Length: 7 } && color[0] == '#' && color.Skip(1).All(char.IsAsciiHexDigit);
 }
 
 /// <summary>A list's tab: what it is, and how many things are still to get on it.</summary>

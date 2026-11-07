@@ -31,7 +31,9 @@
             var active = list.Key == _active?.Key;
 
             <a href="@($"shopping/{list.Key}")" role="tab" aria-selected="@active"
-               class="list-tabs__tab @(active ? "is-active" : null)">
+               class="list-tabs__tab @(active ? "is-active" : null)"
+               style="@(ShoppingListDefinition.IsValidColor(list.Color) ? $"--shop-color:{list.Color}" : null)">
+                <ShopIcon List="@list" />
                 <span>@list.Label(CurrentCulture)</span>
                 @if (summary.Open > 0)
                 {
@@ -53,7 +55,7 @@
     }
     else
     {
-        <span class="week-bar__range">@L["Shopping_AdHocHint"]</span>
+        <span class="week-bar__note">@L["Shopping_AdHocHint"]</span>
     }
     <span class="week-bar__spacer"></span>
 
@@ -130,25 +132,25 @@
                 }
                 else
                 {
-                    <ul class="moments shopping__moments">
+                    <ol class="timeline shopping__timeline">
                         @foreach (var (moment, kind, label) in new[]
                         {
                             (session.Trip.Order, "order", "Shopping_Order"),
                             (session.Trip.Delivery, "delivery", "Shopping_Delivery"),
                         })
                         {
-                            <li class="moment moment--@kind">
-                                <span class="moment__rule" aria-hidden="true"></span>
-                                <span class="moment__text">
-                                    <span class="moment__label">@L[label]</span>
-                                    <span class="moment__when">@Format(moment)</span>
-                                </span>
-                                <span class="badge @(moment.IsPredicted ? "badge--soft" : "badge--ok")">
-                                    @(moment.IsPredicted ? L["Shopping_Predicted"] : L["Shopping_Confirmed"])
+                            <li class="timeline__step timeline__step--@kind">
+                                <span class="timeline__dot" aria-hidden="true"></span>
+                                <span class="timeline__text">
+                                    <span class="timeline__label">@L[label]</span>
+                                    <span class="timeline__when">@Format(moment)</span>
+                                    <span class="badge @(moment.IsPredicted ? "badge--soft" : "badge--ok") timeline__badge">
+                                        @(moment.IsPredicted ? L["Shopping_Predicted"] : L["Shopping_Confirmed"])
+                                    </span>
                                 </span>
                             </li>
                         }
-                    </ul>
+                    </ol>
 
                     @if (CanEdit)
                     {
@@ -167,6 +169,10 @@
         <section class="card shopping__list">
             <header class="card__head">
                 <h2 class="card__title">
+                    @if (!IsWeekly && _active is { } shop)
+                    {
+                        <ShopIcon List="@shop" Class="shop-icon--title" Size="16" />
+                    }
                     @(IsWeekly ? L["Shopping_List"] : _active?.Label(CurrentCulture))
                     @if (Items.Count > 0)
                     {
@@ -353,7 +359,9 @@
 
                             @if (!string.IsNullOrWhiteSpace(item.By))
                             {
-                                <span class="shopping-item__by">@item.By</span>
+                                @* Initials, with the name on hover: who asked matters,
+                                   but not as much as what. *@
+                                <span class="shopping-item__by" title="@item.By" aria-label="@item.By">@Initials(item.By)</span>
                             }
                         }
 
@@ -1117,6 +1125,19 @@ else if (_loading)
 
     private string WeekLabel() =>
         _week is { } week ? string.Format(L["Shopping_WeekOf"], week.ToString("d MMMM yyyy")) : string.Empty;
+
+    /// <summary>"Agnes" → "AG", "Papa Ours" → "PO".</summary>
+    private static string Initials(string? name)
+    {
+        var words = (name ?? string.Empty).Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
+        return words.Length switch
+        {
+            0 => string.Empty,
+            1 => words[0][..Math.Min(2, words[0].Length)].ToUpperInvariant(),
+            _ => $"{char.ToUpperInvariant(words[0][0])}{char.ToUpperInvariant(words[^1][0])}",
+        };
+    }
 
     /// <summary>Both date and time matter here, so both are shown.</summary>
     private static string Format(ShoppingMoment moment) => moment.At.ToString("dddd d MMM, HH:mm");

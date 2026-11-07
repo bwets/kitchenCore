@@ -19,13 +19,13 @@ public static class ThemeCatalog
     public const string StorageKey = "kitchencore.theme";
 
     /// <summary>The default: follow the device.</summary>
-    public static ThemeOption Auto { get; } = new(null, "Theme_Auto", "linear-gradient(135deg, #f8faf6 50%, #111411 50%)");
+    public static ThemeOption Auto { get; } = new(null, "Theme_Auto", "linear-gradient(135deg, #f6f5ef 50%, #121411 50%)");
 
     public static IReadOnlyList<ThemeOption> All { get; } =
     [
         Auto,
-        new("light", "Theme_Light", "#f8faf6"),
-        new("dark", "Theme_Dark", "#111411"),
+        new("light", "Theme_Light", "#f6f5ef"),
+        new("dark", "Theme_Dark", "#121411"),
         new("nord", "Theme_Nord", "#88c0d0"),
         new("darcula", "Theme_Darcula", "#cc7832"),
     ];

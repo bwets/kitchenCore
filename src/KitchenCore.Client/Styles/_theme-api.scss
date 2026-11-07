@@ -21,6 +21,8 @@ $required-tokens:
   // Calendar markers: the shopping order deadline and the delivery, drawn as a
   // line across the day. Blue and green respectively, per theme.
   marker-order marker-delivery
+  // Text on a marker pill, and on the "confirmed" badge, which shares its colour.
+  on-marker
   // Slot tones. Slots come from config, so the palette is positional: SlotTone.cs
   // maps a slot key onto one of these six.
   slot-0-container slot-0-on slot-0-accent

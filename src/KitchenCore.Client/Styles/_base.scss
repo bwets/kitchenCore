@@ -1,8 +1,20 @@
 @use "tokens" as *;
 
-// The wordmark's face. Self-hosted rather than linked from Google Fonts: this
-// runs on a kitchen tablet, and in standalone desktop mode on a machine that may
-// have no internet at all. See wwwroot/fonts/README.md.
+// Both faces are self-hosted rather than linked from Google Fonts: this runs on
+// a kitchen tablet, and in standalone desktop mode on a machine that may have no
+// internet at all. See wwwroot/fonts/README.md.
+
+// The text face. One variable file covers every weight the app uses.
+@font-face {
+  font-family: "Inter";
+  src: url("/fonts/inter-latin-var.woff2") format("woff2-variations"),
+       url("/fonts/inter-latin-var.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+// The display face: the name, headings, day numbers.
 @font-face {
   font-family: "Fraunces";
   src: url("/fonts/fraunces-600.woff2") format("woff2");
@@ -43,11 +55,12 @@ html body {
 
 body {
   margin: 0;
-  font-family: "Segoe UI Variable", "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
-  font-size: 16px;
+  font-family: $font-text;
+  font-size: 15px;
   line-height: 1.45;
   color: var(--on-surface);
   background: var(--surface);
+  -webkit-font-smoothing: antialiased;
 }
 
 h1, h2, h3 {
@@ -56,8 +69,15 @@ h1, h2, h3 {
   font-weight: 600;
 }
 
-h1 { font-size: 1.4rem; letter-spacing: -0.01em; }
-h2 { font-size: 1.1rem; }
+// Page and card headings are display type; small headings inside a component
+// opt out where they are really labels.
+h1, h2 {
+  font-family: $font-display;
+  letter-spacing: -0.015em;
+}
+
+h1 { font-size: 1.9rem; }
+h2 { font-size: 1.3rem; }
 
 a { color: var(--primary); }
 

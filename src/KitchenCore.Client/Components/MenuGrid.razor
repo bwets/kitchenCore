@@ -10,6 +10,12 @@
     slots are rows, and every day renders a cell for every slot. An empty cell is
     not a gap; it is the "add here" target.
 
+    On a phone, where seven columns cannot be read and a sideways strip hid six
+    days of seven, the same cells are laid out as a list of day cards instead:
+    no cross-day alignment to keep there, one day under the next. Both layouts
+    render the cell through CellBody, so dragging, adding and editing are the
+    same in each; CSS shows one of them.
+
     Serves the week, multi-week and list-adjacent layouts.
 *@
 
@@ -37,86 +43,146 @@
     {
         <div class="menu-grid__gutter @SlotTone.CssClass(slot.Key)">
             @* A plain label, not a pill. Four coloured capsules down the side of
-               every week was more decoration than the rows needed. The colour
-               survives as a bar, which is also all that is left on a phone. *@
+               every week was more decoration than the rows needed. *@
             <span class="menu-grid__slotbar" aria-hidden="true"></span>
             <span class="menu-grid__slotname">@slot.Label(Culture)</span>
         </div>
 
         @foreach (var day in Days)
         {
-            var cell = CellFor(day, slot.Key);
-
             <div class="menu-grid__cell @SlotTone.CssClass(slot.Key) @(IsToday(day.Date) ? "is-today" : null)"
                  data-drop-date="@day.Date.ToString("yyyy-MM-dd")"
                  data-drop-slot="@slot.Key">
-
-                @* The slot's colour as a hairline down the cell, so a phone still
-                   shows which meal a row is without the label column. *@
-                <span class="menu-grid__cellbar" aria-hidden="true"></span>
-
-                @foreach (var marker in MarkersIn(day.Date, slot.Key))
-                {
-                    <span class="day-marker day-marker--@marker.Kind" title="@marker.Label">
-                        <span class="day-marker__chip">@marker.At.ToString("HH:mm")</span>
-                    </span>
-                }
-
-                @if ((cell is null || cell.IsEmpty) && !Editable)
-                {
-                    @* Reading, not planning: an empty cell is just empty. *@
-                    <div class="menu-cell menu-cell--blank"></div>
-                }
-                else if (cell is null || cell.IsEmpty)
-                {
-                    <button type="button"
-                            class="menu-cell menu-cell--empty"
-                            title="@L["Grid_Add"]"
-                            @onclick="() => OnCreate.InvokeAsync((day.Date, slot.Key))">
-                        <span aria-hidden="true">+</span>
-                        <span class="visually-hidden">@L["Grid_Add"]</span>
-                    </button>
-                }
-                else
-                {
-                    <div class="menu-cell @(cell.IsDuplicated ? "is-duplicated" : null)">
-                        @for (var i = 0; i < cell.Entries.Count; i++)
-                        {
-                            var index = i;
-                            var entry = cell.Entries[index];
-
-                            @* data-drag-* is the whole contract with js/drag.js:
-                               it finds the handle, tracks the gesture and reports
-                               the drop. No pointer events cross into Blazor. *@
-                            <button type="button"
-                                    class="menu-entry @(entry.Status == EntryStatus.Requested ? "is-requested" : null)"
-                                    title="@Tooltip(entry)"
-                                    data-drag-date="@(Editable ? day.Date.ToString("yyyy-MM-dd") : null)"
-                                    data-drag-slot="@(Editable ? slot.Key : null)"
-                                    data-drag-index="@(Editable ? index : null)"
-                                    data-drag-title="@(Editable ? entry.Title : null)"
-                                    @onclick="() => OnEdit.InvokeAsync(new MenuEntryRef(day.Date, slot.Key, index, entry))"
-                                    @oncontextmenu="() => OnMoveMenu.InvokeAsync(new MenuEntryRef(day.Date, slot.Key, index, entry))"
-                                    @oncontextmenu:preventDefault="Editable">
-                                <span class="menu-entry__title">@entry.Title</span>
-
-                                @if (!string.IsNullOrWhiteSpace(entry.Notes))
-                                {
-                                    <span class="menu-entry__note" aria-hidden="true"></span>
-                                }
-                            </button>
-                        }
-
-                        @if (cell.IsDuplicated)
-                        {
-                            <span class="menu-cell__flag" title="@L["Duplicate_Hint"]">@L["Duplicate_Short"]</span>
-                        }
-                    </div>
-                }
+                @CellBody(day, slot)
             </div>
         }
     }
 </div>
+
+@* The phone layout: a card per day, the slots inside it as labelled rows. *@
+<div class="menu-days @(Compact ? "menu-days--compact" : null)">
+    @if (!string.IsNullOrEmpty(Label))
+    {
+        <p class="menu-days__label">@Label</p>
+    }
+
+    @foreach (var day in Days)
+    {
+        <section class="menu-day @(IsToday(day.Date) ? "is-today" : null)"
+                 data-day-card="@day.Date.ToString("yyyy-MM-dd")">
+            <header class="menu-day__head">
+                <span class="menu-day__name">@day.Date.ToString("dddd")</span>
+                <span class="menu-day__num">@day.Date.Day</span>
+                @if (IsToday(day.Date))
+                {
+                    <span class="menu-day__today">@L["Week_Today"]</span>
+                }
+            </header>
+
+            @foreach (var slot in Slots)
+            {
+                <div class="menu-day__slot @SlotTone.CssClass(slot.Key)"
+                     data-drop-date="@day.Date.ToString("yyyy-MM-dd")"
+                     data-drop-slot="@slot.Key">
+                    <span class="menu-day__slotname">
+                        <span class="menu-grid__slotbar" aria-hidden="true"></span>
+                        @slot.Label(Culture)
+                    </span>
+                    <div class="menu-day__body">@CellBody(day, slot)</div>
+                </div>
+            }
+        </section>
+    }
+</div>
+
+@code {
+    /// <summary>
+    /// What one (day, slot) holds: its markers, then its entries, or the add
+    /// target in edit mode. The grid cell and the phone's slot row both render
+    /// this, inside an element carrying data-drop-*.
+    /// </summary>
+    private RenderFragment CellBody(MenuDay day, SlotDefinition slot) => __builder =>
+    {
+        var cell = CellFor(day, slot.Key);
+
+        @* The slot's colour as a hairline down the cell. *@
+        <span class="menu-grid__cellbar" aria-hidden="true"></span>
+
+        @foreach (var marker in MarkersIn(day.Date, slot.Key))
+        {
+            <span class="day-marker day-marker--@marker.Kind" title="@marker.Label">
+                <span class="day-marker__chip"><strong>@marker.At.ToString("HH:mm")</strong> @L[marker.Kind == "order" ? "Shopping_Order" : "Shopping_Delivery"]</span>
+            </span>
+        }
+
+        @if ((cell is null || cell.IsEmpty) && !Editable)
+        {
+            @* Reading, not planning: an empty cell is just empty. *@
+            <div class="menu-cell menu-cell--blank"></div>
+        }
+        else if (cell is null || cell.IsEmpty)
+        {
+            <button type="button"
+                    class="menu-cell menu-cell--empty"
+                    title="@L["Grid_Add"]"
+                    @onclick="() => OnCreate.InvokeAsync((day.Date, slot.Key))">
+                <span aria-hidden="true">+</span>
+                <span class="visually-hidden">@L["Grid_Add"]</span>
+            </button>
+        }
+        else
+        {
+            <div class="menu-cell @(cell.IsDuplicated ? "is-duplicated" : null)">
+                @for (var i = 0; i < cell.Entries.Count; i++)
+                {
+                    var index = i;
+                    var entry = cell.Entries[index];
+
+                    @* data-drag-* is the whole contract with js/drag.js:
+                       it finds the handle, tracks the gesture and reports
+                       the drop. No pointer events cross into Blazor. *@
+                    <button type="button"
+                            class="menu-entry @(entry.Status == EntryStatus.Requested ? "is-requested" : null)"
+                            title="@Tooltip(entry)"
+                            data-drag-date="@(Editable ? day.Date.ToString("yyyy-MM-dd") : null)"
+                            data-drag-slot="@(Editable ? slot.Key : null)"
+                            data-drag-index="@(Editable ? index : null)"
+                            data-drag-title="@(Editable ? entry.Title : null)"
+                            @onclick="() => OnEdit.InvokeAsync(new MenuEntryRef(day.Date, slot.Key, index, entry))"
+                            @oncontextmenu="() => OnMoveMenu.InvokeAsync(new MenuEntryRef(day.Date, slot.Key, index, entry))"
+                            @oncontextmenu:preventDefault="Editable">
+                        <span class="menu-entry__title">@entry.Title</span>
+
+                        @if (!string.IsNullOrWhiteSpace(entry.Notes) || entry.Links.Count > 0)
+                        {
+                            <span class="menu-entry__hints">
+                                @if (!string.IsNullOrWhiteSpace(entry.Notes))
+                                {
+                                    <span class="menu-entry__hint">
+                                        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4h9l3 3v13H6zM9 11h6M9 15h6" /></svg>
+                                        @L["Grid_Notes"]
+                                    </span>
+                                }
+                                @if (entry.Links.Count > 0)
+                                {
+                                    <span class="menu-entry__hint">
+                                        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1" /></svg>
+                                        @L["Grid_Link"]
+                                    </span>
+                                }
+                            </span>
+                        }
+                    </button>
+                }
+
+                @if (cell.IsDuplicated)
+                {
+                    <span class="menu-cell__flag" title="@L["Duplicate_Hint"]">@L["Duplicate_Short"]</span>
+                }
+            </div>
+        }
+    };
+}
 
 @code {
     [Parameter, EditorRequired]

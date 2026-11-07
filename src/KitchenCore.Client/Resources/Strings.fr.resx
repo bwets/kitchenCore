@@ -63,6 +63,17 @@
   <data name="Week_Next" xml:space="preserve"><value>Semaine suivante</value></data>
   <data name="Week_Today" xml:space="preserve"><value>Aujourd'hui</value></data>
   <data name="Grid_Add" xml:space="preserve"><value>Ajouter</value></data>
+  <data name="Grid_Notes" xml:space="preserve"><value>Recette</value></data>
+  <data name="Grid_Link" xml:space="preserve"><value>Lien</value></data>
+  <data name="Home_Morning" xml:space="preserve"><value>Bonjour</value></data>
+  <data name="Home_Afternoon" xml:space="preserve"><value>Bon après-midi</value></data>
+  <data name="Home_Evening" xml:space="preserve"><value>Bonsoir</value></data>
+  <data name="Home_OnTheTable" xml:space="preserve"><value>Au menu aujourd’hui</value></data>
+  <data name="Home_ReadMore" xml:space="preserve"><value>Voir le détail</value></data>
+  <data name="Home_Tomorrow" xml:space="preserve"><value>Demain</value></data>
+  <data name="Home_StillToGet" xml:space="preserve"><value>Reste à acheter</value></data>
+  <data name="Home_ItemCount" xml:space="preserve"><value>{0} à prendre</value></data>
+  <data name="Home_NothingToGet" xml:space="preserve"><value>Rien</value></data>
   <data name="Issues_Title" xml:space="preserve"><value>Certaines entrées n'ont pas pu être lues :</value></data>
   <data name="Entry_New" xml:space="preserve"><value>Nouvelle entrée</value></data>
   <data name="Entry_Edit" xml:space="preserve"><value>Modifier</value></data>

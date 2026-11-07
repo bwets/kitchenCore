@@ -9,14 +9,14 @@
 @if (_git is null)
 {
     <span class="git-badge">
-        <span class="git-badge__dot"></span>
+        <svg class="git-badge__icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 18a4.5 4.5 0 0 1-.6-9 6 6 0 0 1 11.5 1.6A3.8 3.8 0 0 1 17.5 18z" /></svg>
         <span class="git-badge__text">@L["Loading"]</span>
     </span>
 }
 else if (_git.Enabled)
 {
     <span class="git-badge git-badge--on" title="@(_git.RemoteUrl ?? ReasonText(_git.Reason))">
-        <span class="git-badge__dot"></span>
+        <svg class="git-badge__icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 18a4.5 4.5 0 0 1-.6-9 6 6 0 0 1 11.5 1.6A3.8 3.8 0 0 1 17.5 18z" /></svg>
         <span class="git-badge__text">@_git.Repository</span>
         @if (!string.IsNullOrEmpty(_git.Branch))
         {
@@ -27,7 +27,7 @@ else if (_git.Enabled)
 else
 {
     <span class="git-badge" title="@ReasonText(_git.Reason)">
-        <span class="git-badge__dot"></span>
+        <svg class="git-badge__icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 18a4.5 4.5 0 0 1-.6-9 6 6 0 0 1 11.5 1.6A3.8 3.8 0 0 1 17.5 18z" /></svg>
         <span class="git-badge__text">@L["Git_LocalOnly"]</span>
     </span>
 }

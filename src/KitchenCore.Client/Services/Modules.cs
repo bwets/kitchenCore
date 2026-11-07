@@ -3,7 +3,11 @@ using KitchenCore.Shared;
 namespace KitchenCore.Client.Services;
 
 /// <summary>One view within a module.</summary>
-public sealed record ModuleView(string Route, string LabelKey);
+/// <param name="Icon">
+/// SVG path data on a 24-unit stroked grid, for the view switch in the header,
+/// where the views are icons first and words only when there is room.
+/// </param>
+public sealed record ModuleView(string Route, string LabelKey, string? Icon = null);
 
 /// <summary>
 /// A top-level part of the app: the menu, the shopping list, whatever comes
@@ -19,12 +23,14 @@ public sealed record ModuleView(string Route, string LabelKey);
 /// to manage the app itself.
 /// </param>
 /// <param name="AdminOnly">Hidden from everyone who cannot use it.</param>
+/// <param name="Icon">SVG path data, as for <see cref="ModuleView.Icon"/>: the phone's tab bar shows it above the name.</param>
 public sealed record AppModule(
     Section? Section,
     string Route,
     string LabelKey,
     IReadOnlyList<ModuleView> Views,
-    bool AdminOnly = false)
+    bool AdminOnly = false,
+    string? Icon = null)
 {
     /// <summary>True when the current URL is inside this module.</summary>
     public bool Owns(string path) =>
@@ -39,10 +45,11 @@ public static class AppModules
         "menu",
         "Nav_Menu",
         [
-            new ModuleView("menu/week", "Nav_Week"),
-            new ModuleView("menu/multi-week", "Nav_MultiWeek"),
-            new ModuleView("menu/list", "Nav_List"),
-        ]);
+            new ModuleView("menu/week", "Nav_Week", "M4 6h16v13H4zM4 10h16M9.3 10v9M14.6 10v9"),
+            new ModuleView("menu/multi-week", "Nav_MultiWeek", "M4 4h16v7H4zM4 13h16v7H4zM9.3 4v16M14.6 4v16"),
+            new ModuleView("menu/list", "Nav_List", "M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01"),
+        ],
+        Icon: "M4 5h16v15H4zM4 10h16M9 3v4M15 3v4");
 
     /// <summary>
     /// Part 2. One view for now -- the session list -- so it gets no row of view
@@ -52,7 +59,8 @@ public static class AppModules
         Section.Shopping,
         "shopping",
         "Nav_Shopping",
-        [new ModuleView("shopping", "Nav_ShoppingList")]);
+        [new ModuleView("shopping", "Nav_ShoppingList")],
+        Icon: "M3 4h2.2l2.3 10.4h10.3L20 7H6.4M9.5 19.2h.01M16.5 19.2h.01");
 
     /// <summary>
     /// Managing the app rather than the food.

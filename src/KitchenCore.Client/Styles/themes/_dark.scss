@@ -1,50 +1,54 @@
 // Default dark theme. The counterpart to light, used for the "auto" setting
 // whenever the device reports a dark preference.
+//
+// Warm near-black grounds with a touch of green, sage for the brand, saffron
+// (tertiary) for counts and things waiting on somebody. Surfaces step up in
+// lightness rather than casting shadows: a card is a tint, not a float.
 $theme-dark: (
   color-scheme: dark,
 
-  primary:                #a3d5b3,
-  on-primary:             #0b3b21,
-  primary-container:      #255338,
-  on-primary-container:   #bff0cf,
+  primary:                #86d19f,
+  on-primary:             #0d2416,
+  primary-container:      #1f3a2a,
+  on-primary-container:   #bfebcd,
 
-  secondary:              #ffb4a5,
-  on-secondary:           #5e1608,
-  secondary-container:    #7d2d1f,
+  secondary:              #f29a80,
+  on-secondary:           #3b0f04,
+  secondary-container:    #5c2618,
   on-secondary-container: #ffdad3,
 
-  tertiary:               #ecc16b,
-  on-tertiary:            #422c00,
-  tertiary-container:     #5e4200,
-  on-tertiary-container:  #ffdfa6,
+  tertiary:               #edbe5a,
+  on-tertiary:            #2a1d00,
+  tertiary-container:     #4a3708,
+  on-tertiary-container:  #ffe2a4,
 
   error:                  #f2b8b5,
   on-error:               #601410,
   error-container:        #8c1d18,
   on-error-container:     #f9dedc,
 
-  surface:                    #111411,
-  surface-container-lowest:   #0b0e0b,
-  surface-container-low:      #191d18,
-  surface-container:          #1d211c,
-  surface-container-high:     #272b26,
-  surface-container-highest:  #323630,
+  surface:                    #121411,
+  surface-container-lowest:   #161915,
+  surface-container-low:      #1a1d19,
+  surface-container:          #1f231e,
+  surface-container-high:     #262a24,
+  surface-container-highest:  #30352e,
 
-  on-surface:          #e1e4dd,
-  on-surface-variant:  #c0c8bc,
-  outline:             #8a9186,
-  outline-variant:     #404942,
+  on-surface:          #ecefe7,
+  on-surface-variant:  #a8b0a3,
+  outline:             #7d8578,
+  outline-variant:     #2e332c,
 
   shadow-1: (0 1px 2px rgba(0, 0, 0, 0.5)),
-  shadow-2: (0 4px 14px rgba(0, 0, 0, 0.6)),
-  marker-order: #7fb0f0,
-  marker-delivery: #7fc89a,
+  shadow-2: (0 10px 30px rgba(0, 0, 0, 0.55)),
+  marker-order: #6fa8ff,
+  marker-delivery: #5fcb86,
+  on-marker: #0b0c0a,
 
-
-  slot-0-container: #22503a, slot-0-on: #bff0cf, slot-0-accent: #7fb894,
-  slot-1-container: #4e3b0c, slot-1-on: #ffdfa6, slot-1-accent: #d8b46a,
-  slot-2-container: #1e3559, slot-2-on: #d5e3ff, slot-2-accent: #9db8e8,
-  slot-3-container: #63251a, slot-3-on: #ffdad3, slot-3-accent: #e59a8c,
-  slot-4-container: #3d2a63, slot-4-on: #e8ddff, slot-4-accent: #bfa8e8,
+  slot-0-container: #1f3a2a, slot-0-on: #bfebcd, slot-0-accent: #86d19f,
+  slot-1-container: #4a3708, slot-1-on: #ffe2a4, slot-1-accent: #edbe5a,
+  slot-2-container: #1b2c47, slot-2-on: #d5e3ff, slot-2-accent: #93b8f5,
+  slot-3-container: #5c2618, slot-3-on: #ffdad3, slot-3-accent: #f29a80,
+  slot-4-container: #3a2f4a, slot-4-on: #e8ddff, slot-4-accent: #bfa8e8,
   slot-5-container: #14423c, slot-5-on: #c9efe9, slot-5-accent: #7fc4ba,
 );

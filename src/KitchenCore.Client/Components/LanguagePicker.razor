@@ -1,29 +1,52 @@
 @using System.Globalization
 @inject SystemStatusService Status
 @inject CulturePreference Culture
+@inject IStringLocalizer<Strings> L
 
-@* A segmented toggle rather than a dropdown: with two languages a select costs
-   an extra click and shows nothing useful when closed. Custom rather than a
-   Fluent control because Fluent has no segmented control of its own. *@
+@* A menu, like the theme picker's and sharing its styles: the header has room
+   for one button here, not one per language. Closed, it shows the current
+   language's code; open, every language by its own name. *@
 
-<div class="lang-toggle" role="group" aria-label="Language">
-    @foreach (var culture in _available)
+<div class="theme-picker lang-picker">
+    <button type="button"
+            class="theme-picker__trigger lang-picker__trigger"
+            aria-haspopup="menu"
+            aria-expanded="@_open"
+            title="@L["Status_Language"]"
+            @onclick="() => _open = !_open">
+        <span aria-hidden="true">@_current.ToUpperInvariant()</span>
+        <span class="visually-hidden">@L["Status_Language"]: @DisplayName(_current)</span>
+    </button>
+
+    @if (_open)
     {
-        var isCurrent = string.Equals(culture, _current, StringComparison.OrdinalIgnoreCase);
+        @* Catches clicks anywhere else so the menu closes without a JS listener. *@
+        <button type="button" class="theme-picker__scrim" tabindex="-1"
+                aria-hidden="true" @onclick="() => _open = false"></button>
 
-        <button type="button"
-                class="lang-toggle__option @(isCurrent ? "is-current" : null)"
-                aria-pressed="@isCurrent"
-                title="@DisplayName(culture)"
-                @onclick="() => SelectAsync(culture)">
-            @culture.ToUpperInvariant()
-        </button>
+        <ul class="theme-picker__menu" role="menu">
+            @foreach (var culture in _available)
+            {
+                var isCurrent = string.Equals(culture, _current, StringComparison.OrdinalIgnoreCase);
+
+                <li role="none">
+                    <button type="button" role="menuitemradio" aria-checked="@isCurrent"
+                            class="theme-picker__item @(isCurrent ? "is-current" : null)"
+                            lang="@culture"
+                            @onclick="() => SelectAsync(culture)">
+                        <span class="lang-picker__code">@culture.ToUpperInvariant()</span>
+                        <span>@DisplayName(culture)</span>
+                    </button>
+                </li>
+            }
+        </ul>
     }
 </div>
 
 @code {
     private string _current = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
     private List<string> _available = ["fr", "en"];
+    private bool _open;
 
     protected override async Task OnInitializedAsync()
     {
@@ -36,6 +59,8 @@
 
     private async Task SelectAsync(string culture)
     {
+        _open = false;
+
         if (!string.Equals(culture, _current, StringComparison.OrdinalIgnoreCase))
         {
             // Changing culture means restarting the WebAssembly runtime, so this reloads.
@@ -43,6 +68,7 @@
         }
     }
 
+    /// <summary>Each language in its own words: someone looking for theirs reads it that way.</summary>
     private static string DisplayName(string culture) => culture switch
     {
         "fr" => "Français",

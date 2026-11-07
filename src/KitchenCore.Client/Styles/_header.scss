@@ -9,10 +9,10 @@
   // Wrapping plus min-height (not height) is what lets the nav drop to a second
   // row on a phone instead of being overlapped by the tools.
   flex-wrap: wrap;
-  gap: $space-3;
+  gap: $space-4;
   min-height: var(--header-height);
-  padding: 0 $space-4;
-  background: var(--surface-container-low);
+  padding: $space-2 $space-6;
+  background: var(--surface-container-lowest);
   border-bottom: 1px solid var(--outline-variant);
 
   // The wordmark. A link home, but it should not look like one: underlined text
@@ -21,7 +21,7 @@
   &__brand {
     display: inline-flex;
     align-items: center;
-    gap: $space-2;
+    gap: $space-3;
     color: var(--on-surface);
     text-decoration: none;
     white-space: nowrap;
@@ -31,9 +31,9 @@
     // Fraunces is a soft, slightly quirky serif -- warm rather than corporate,
     // which is the register a family kitchen app wants. Display sizes need less
     // tracking than body text, hence the tightening.
-    font-family: "Fraunces", "Segoe UI Variable", Georgia, serif;
+    font-family: $font-display;
     font-weight: 600;
-    font-size: 1.22rem;
+    font-size: 1.3rem;
     letter-spacing: -0.015em;
     line-height: 1;
   }
@@ -41,12 +41,21 @@
   &__mark {
     display: grid;
     place-items: center;
-    width: 2rem;
-    height: 2rem;
+    width: 2.15rem;
+    height: 2.15rem;
     border-radius: $radius-md;
     background: var(--primary-container);
-    color: var(--on-primary-container);
+    color: var(--primary);
     font-size: 1rem;
+  }
+
+  // The module switch: one segmented pill, the current part filled.
+  &__modules {
+    display: flex;
+    gap: $space-1;
+    padding: $space-1;
+    border-radius: $radius-full;
+    background: var(--surface-container);
   }
 
   // Source order is brand, modules, spacer, tools. Explicit orders let the same
@@ -55,8 +64,9 @@
   // is how the app title ended up after the tabs.
   &__brand   { order: 1; }
   &__modules { order: 2; }
-  &__spacer  { order: 3; }
-  &__tools   { order: 4; }
+  &__views   { order: 3; }
+  &__spacer  { order: 4; }
+  &__tools   { order: 5; }
 
   &__spacer { flex: 1 1 auto; }
 
@@ -66,24 +76,38 @@
     gap: $space-2;
   }
 
-  // Phone: brand and tools share the top row, the module tabs take a full-width
-  // second row of their own.
+  // Phone: brand and tools on the top bar; the module switch becomes a tab bar
+  // along the bottom of the screen, where a thumb already is.
   @media (max-width: $bp-tablet) {
+    flex-wrap: nowrap;
     padding: $space-2 $space-3;
     gap: $space-2;
-    row-gap: $space-2;
+
+    // The mark alone still goes home; the name is what makes room for the
+    // view switch and the tools on one line.
+    &__name { display: none; }
+
+    &__tools { gap: $space-1; }
 
     &__modules {
-      order: 5;
-      flex: 1 0 100%;
-      width: 100%;
+      position: fixed;
+      z-index: 25;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      justify-content: space-around;
+      padding: $space-2 $space-3 calc(#{$space-2} + env(safe-area-inset-bottom));
+      border-radius: 0;
+      border-top: 1px solid var(--outline-variant);
+      background: var(--surface-container-lowest);
     }
 
-    // Pushes the tools hard right on the top row.
-    &__spacer {
-      order: 2;
-    }
   }
+}
+
+// Room under the page for the bottom tab bar.
+@media (max-width: $bp-tablet) {
+  html body { padding-bottom: calc(4rem + env(safe-area-inset-bottom)); }
 }
 
 .nav-link {
@@ -120,12 +144,11 @@
   color: var(--on-surface-variant);
   white-space: nowrap;
 
-  &__dot {
-    width: 0.5rem;
-    height: 0.5rem;
-    border-radius: 50%;
-    background: var(--outline);
+  // A cloud: what the badge is about, synced or not. Grey when the data stays
+  // on this machine, the brand colour when it goes to a repository.
+  &__icon {
     flex: none;
+    color: var(--outline);
   }
 
   &--on {
@@ -133,15 +156,15 @@
     background: var(--primary-container);
     color: var(--on-primary-container);
 
-    .git-badge__dot { background: var(--primary); }
+    .git-badge__icon { color: var(--primary); }
   }
 
   &__branch { opacity: 0.75; }
 
-  // On a small screen the badge collapses to its dot: the header has to fit a
-  // brand, nav, theme and language control, and the state is still readable as
-  // colour (green = a repo, grey = local only). The full text stays available
-  // through the title attribute.
+  // On a small screen the badge collapses to its cloud: the header has to fit
+  // the mark, the view switch, theme and language, and the state still reads
+  // as colour (green = a repo, grey = local only). The full text stays
+  // available through the title attribute.
   @media (max-width: $bp-tablet) {
     width: 2.25rem;
     height: 2.25rem;
@@ -150,40 +173,23 @@
 
     &__text { display: none; }
 
-    &__dot {
-      width: 0.6rem;
-      height: 0.6rem;
-    }
   }
 }
 
-// Segmented language toggle. Two languages do not justify a dropdown.
-.lang-toggle {
-  display: inline-flex;
-  padding: 2px;
-  gap: 2px;
-  border-radius: $radius-full;
-  background: var(--surface-container-high);
+// Language: a menu built on the theme picker's (see LanguagePicker.razor). The
+// trigger carries the code, so it is as small as the palette beside it.
+.lang-picker__trigger {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
 
-  &__option {
-    min-height: 2rem;
-    padding: 0 $space-3;
-    border: 0;
-    border-radius: $radius-full;
-    background: transparent;
-    color: var(--on-surface-variant);
-    font-size: 0.75rem;
-    font-weight: 600;
-    letter-spacing: 0.04em;
-
-    &:hover { color: var(--on-surface); }
-
-    &.is-current {
-      background: var(--surface-container-lowest);
-      color: var(--on-surface);
-      box-shadow: var(--shadow-1);
-    }
-  }
+.lang-picker__code {
+  width: 1.6rem;
+  color: var(--on-surface-variant);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
 }
 
 // Theme picker. A menu rather than segments, because the theme list grows.
@@ -198,7 +204,10 @@
     padding: 0;
     border: 1px solid var(--outline-variant);
     border-radius: $radius-full;
-    background: var(--surface-container-high);
+    background: transparent;
+    color: var(--on-surface-variant);
+
+    &:hover { background: var(--surface-container-high); color: var(--on-surface); }
   }
 
   &__swatch {
@@ -289,20 +298,68 @@
 .module-tab {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: $space-2;
-  padding: 0 $space-4;
-  border-bottom: 2px solid transparent;
+  min-height: 2.25rem;
+  padding: 0 $space-5;
+  border-radius: $radius-full;
   color: var(--on-surface-variant);
   font-size: 0.92rem;
-  font-weight: 600;
+  font-weight: 500;
   white-space: nowrap;
   text-decoration: none;
 
   &:hover { color: var(--on-surface); }
 
   &.is-current {
-    border-bottom-color: var(--primary);
-    color: var(--on-surface);
+    background: var(--primary);
+    color: var(--on-primary);
+    font-weight: 600;
+  }
+
+  // Icons and Home belong to the phone's tab bar; on a desktop the words are
+  // enough and the brand goes home.
+  &__icon,
+  &--home {
+    display: none;
+  }
+
+  // In the phone's bottom bar each tab takes an equal share and is just its
+  // icon, the current one marked by a pill behind it. The name stays for
+  // screen readers; three familiar icons do not need it said twice.
+  @media (max-width: $bp-tablet) {
+    flex: 1 1 0;
+    min-height: 2.75rem;
+    padding: 0;
+    border-radius: $radius-md;
+
+    &--home { display: inline-flex; }
+
+    &__label {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+      white-space: nowrap;
+    }
+
+    &__icon {
+      display: block;
+      box-sizing: content-box;
+      padding: 6px $space-5;
+      border-radius: $radius-full;
+    }
+
+    &.is-current {
+      background: transparent;
+      color: var(--on-surface);
+    }
+
+    &.is-current &__icon {
+      background: var(--primary-container);
+      color: var(--on-primary-container);
+    }
   }
 
   // Present, but plainly not ready.
@@ -324,46 +381,52 @@
   }
 }
 
-// The second row: how to look at the current module.
-.app-views {
-  position: sticky;
-  top: var(--header-height);
-  z-index: 19;
+// How to look at the current module: a small segmented switch beside the
+// module one. Icons always; the words too where the bar has room for them.
+.view-switch {
   display: flex;
-  gap: $space-1;
-  padding: $space-2 $space-4;
-  background: var(--surface-container-low);
-  border-bottom: 1px solid var(--outline-variant);
-  overflow-x: auto;
-  scrollbar-width: none;
-
-  &::-webkit-scrollbar { display: none; }
-
-  @media (max-width: $bp-tablet) {
-    padding: $space-2 $space-3;
-  }
-}
-
-.view-tab {
-  display: inline-flex;
-  align-items: center;
-  min-height: 2.25rem;
-  padding: 0 $space-4;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--outline-variant);
   border-radius: $radius-full;
-  color: var(--on-surface-variant);
-  font-size: 0.85rem;
-  white-space: nowrap;
-  text-decoration: none;
 
-  &:hover {
-    background: var(--surface-container-high);
-    color: var(--on-surface);
+  &__option {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: $space-2;
+    min-width: 2.5rem;
+    min-height: 2.25rem;
+    padding: 0 $space-3;
+    border-radius: $radius-full;
+    color: var(--on-surface-variant);
+    font-size: 0.85rem;
+    font-weight: 500;
+    white-space: nowrap;
+    text-decoration: none;
+
+    &:hover { color: var(--on-surface); background: var(--surface-container-high); }
+
+    &.active {
+      background: var(--primary-container);
+      color: var(--on-primary-container);
+      font-weight: 600;
+    }
+
+    svg { flex: none; }
   }
 
-  &.active {
-    background: var(--primary-container);
-    color: var(--on-primary-container);
-    font-weight: 600;
+  @media (max-width: $bp-wide) {
+    &__option { padding: 0 $space-2; }
+
+    &__label {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+      white-space: nowrap;
+    }
   }
 }
 

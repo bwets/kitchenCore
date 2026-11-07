@@ -13,8 +13,16 @@
             aria-expanded="@_open"
             title="@L["Theme_Label"]"
             @onclick="Toggle">
-        <span class="theme-picker__swatch" style="background:@Theme.Current.Swatch"></span>
-        <span class="visually-hidden">@L[Theme.Current.LabelKey]</span>
+        @* A palette, not a bare colour dot: a circle alone said nothing about
+           what tapping it would do. *@
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor"
+             stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 3a9 9 0 1 0 0 18c1.1 0 1.7-.8 1.7-1.7 0-.5-.2-.9-.5-1.2-.3-.3-.5-.7-.5-1.2 0-1 .8-1.7 1.7-1.7H16a5 5 0 0 0 5-5C21 6.6 17 3 12 3z" />
+            <circle cx="7.5" cy="11" r="1" fill="currentColor" />
+            <circle cx="10.5" cy="7.5" r="1" fill="currentColor" />
+            <circle cx="15" cy="7.5" r="1" fill="currentColor" />
+        </svg>
+        <span class="visually-hidden">@L["Theme_Label"]: @L[Theme.Current.LabelKey]</span>
     </button>
 
     @if (_open)

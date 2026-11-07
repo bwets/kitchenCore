@@ -78,10 +78,19 @@ export function scrollIntoView(id) {
     }
 }
 
-// On a phone the week grid is a horizontal strip of days, and it opens on
-// Monday -- which on a Friday means swiping past four days you have already
-// eaten. Scroll the strip so today is the day you land on.
+// The week opens on Monday -- which on a Friday means scrolling past four days
+// you have already eaten. Bring today to where you land: the top of the page on
+// a phone, the start of the strip wherever the grid scrolls sideways.
 export function scrollDayIntoView(date) {
+    // Phone: the week is a list of day cards, so today goes to the top of the
+    // page. A hidden card (the desktop grid is showing) has no offsetParent.
+    const card = document.querySelector(`[data-day-card="${CSS.escape(date)}"]`);
+
+    if (card && card.offsetParent !== null) {
+        card.scrollIntoView({ block: 'start', behavior: 'instant' });
+        return;
+    }
+
     const cell = document.querySelector(`[data-day-head="${CSS.escape(date)}"]`);
     const scroller = cell?.closest('.menu-grid-scroll');
 

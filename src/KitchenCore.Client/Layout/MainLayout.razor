@@ -8,10 +8,10 @@
     Two levels of navigation, because the app has two levels: which part of
     family life you are in, and how you want to look at it.
 
-    Modules are tabs on the top bar. Views sit in a second row underneath, and
-    only for the module you are in -- a flat row of links made "Week" and
-    "Shopping" read as siblings, when one is a view and the other is a whole
-    other part of the app.
+    Modules are a segmented switch on the top bar (a tab bar along the bottom on
+    a phone). Views are a smaller icon switch beside it, and only for the module
+    you are in -- a flat row of links made "Week" and "Shopping" read as
+    siblings, when one is a view and the other is a whole other part of the app.
 *@
 
 <header class="app-header">
@@ -23,6 +23,16 @@
     @if (Auth.Identity.Approved)
     {
         <nav class="app-header__modules" aria-label="@L["Nav_Modules"]">
+            @* Home is the brand on a desktop; on a phone, where the bar is a tab
+               bar and the name is hidden, it needs a tab of its own. *@
+            <a class="module-tab module-tab--home @(Path.Length == 0 ? "is-current" : null)" href="">
+                <svg class="module-tab__icon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none"
+                     stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 11l8-7 8 7v9h-5v-6h-6v6H4z" />
+                </svg>
+                <span class="module-tab__label">@L["Nav_Home"]</span>
+            </a>
+
             @foreach (var module in AppModules.Tabs)
             {
                 var ready = module.Views.Count > 0;
@@ -31,7 +41,14 @@
                 {
                     <a class="module-tab @(IsCurrent(module) ? "is-current" : null)"
                        href="@FirstViewOf(module)">
-                        @L[module.LabelKey]
+                        @if (module.Icon is { } icon)
+                        {
+                            <svg class="module-tab__icon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none"
+                                 stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="@icon" />
+                            </svg>
+                        }
+                        <span class="module-tab__label">@L[module.LabelKey]</span>
                     </a>
                 }
                 else
@@ -44,6 +61,27 @@
                         <span class="module-tab__later">@L["Nav_Soon"]</span>
                     </span>
                 }
+            }
+        </nav>
+    }
+
+    @if (Auth.Identity.Approved && Current is { Views.Count: > 1 } current)
+    {
+        @* How to look at the current module, as a small switch beside it rather
+           than a row of its own: it is a setting of the page, not a place. *@
+        <nav class="view-switch app-header__views" aria-label="@L["Nav_Views"]">
+            @foreach (var view in current.Views)
+            {
+                <NavLink class="view-switch__option" href="@view.Route" title="@L[view.LabelKey]">
+                    @if (view.Icon is { } icon)
+                    {
+                        <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true" fill="none"
+                             stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="@icon" />
+                        </svg>
+                    }
+                    <span class="view-switch__label">@L[view.LabelKey]</span>
+                </NavLink>
             }
         </nav>
     }
@@ -73,16 +111,6 @@
         }
     </div>
 </header>
-
-@if (Auth.Identity.Approved && Current is { Views.Count: > 1 } current)
-{
-    <nav class="app-views" aria-label="@L["Nav_Views"]">
-        @foreach (var view in current.Views)
-        {
-            <NavLink class="view-tab" href="@view.Route">@L[view.LabelKey]</NavLink>
-        }
-    </nav>
-}
 
 <main class="app-main">
     @if (Auth.Identity.Approved || IsAccessPage)

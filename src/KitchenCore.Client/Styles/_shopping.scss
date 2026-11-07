@@ -33,21 +33,6 @@
   font-size: 0.85rem;
 }
 
-.shopping__moments .moment {
-  padding-block: 2px;
-
-  &__text {
-    display: grid;
-    flex: 1 1 auto;
-    min-width: 0;
-  }
-
-  &__label {
-    min-width: 0;
-    font-size: 0.78rem;
-  }
-}
-
 .shopping__trip-actions {
   display: flex;
   flex-wrap: wrap;
@@ -163,7 +148,7 @@
 
 .shopping__items {
   display: grid;
-  gap: 2px;
+  gap: $space-2;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -173,11 +158,13 @@
   position: relative;
   display: flex;
   align-items: center;
-  gap: $space-2;
-  min-height: 2.75rem;
-  padding: $space-1 $space-2;
-  border-radius: $radius-sm;
-  background: var(--surface-container-low);
+  gap: $space-3;
+  min-height: 3.5rem;
+  padding: $space-2 $space-2 $space-2 $space-3;
+  border-radius: $radius-md;
+  background: var(--surface-container-high);
+  font-size: 0.98rem;
+  font-weight: 500;
 
   &__handle {
     display: grid;
@@ -191,9 +178,10 @@
   }
 
   &__check {
-    width: 1.15rem;
-    height: 1.15rem;
+    width: 1.35rem;
+    height: 1.35rem;
     flex: none;
+    accent-color: var(--primary);
   }
 
   &__tick {
@@ -220,13 +208,19 @@
     .button { flex: none; min-height: 2.25rem; padding: 0 $space-3; }
   }
 
+  // Who asked, as initials in a circle.
   &__by {
     flex: none;
-    padding: 0 $space-2;
-    border-radius: $radius-full;
-    background: var(--surface-container-high);
-    color: var(--on-surface-variant);
-    font-size: 0.72rem;
+    display: grid;
+    place-items: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    background: var(--slot-4-container);
+    color: var(--slot-4-on);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
   }
 
   &.is-done &__title {
@@ -258,7 +252,7 @@
 
 .badge--ok {
   background: var(--marker-delivery);
-  color: var(--surface);
+  color: var(--on-marker);
 }
 
 // Picture buttons: big, thumb-sized targets, since on a phone in the kitchen this
@@ -276,18 +270,18 @@
   align-items: center;
   justify-content: center;
   gap: $space-2;
-  min-height: 3.5rem;
+  min-height: 3rem;
   padding: $space-2 $space-4;
-  border: 1px dashed var(--outline);
+  border: 1px solid var(--outline-variant);
   border-radius: $radius-md;
-  background: var(--surface-container-low);
+  background: transparent;
   color: var(--on-surface);
-  font-weight: 600;
+  font-weight: 500;
   cursor: pointer;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
 
-  &:hover { background: var(--surface-container); }
+  &:hover { background: var(--surface-container-high); }
 
   &:focus-within {
     outline: 2px solid var(--primary);
@@ -556,10 +550,12 @@
 // One tab per shop. Links rather than buttons: each list has its own URL.
 .list-tabs {
   display: flex;
-  gap: $space-1;
-  margin-bottom: $space-3;
+  gap: $space-2;
+  margin-bottom: $space-4;
   overflow-x: auto;
-  border-bottom: 1px solid var(--outline-variant);
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar { display: none; }
 
   &__tab {
     display: inline-flex;
@@ -568,26 +564,68 @@
     gap: $space-2;
     min-height: 2.75rem;
     padding: 0 $space-4;
-    border-bottom: 3px solid transparent;
+    border: 1px solid var(--outline-variant);
+    border-radius: $radius-md;
     color: var(--on-surface-variant);
     font-weight: 600;
     text-decoration: none;
 
-    &:hover { color: var(--on-surface); }
+    &:hover { color: var(--on-surface); background: var(--surface-container-high); }
 
     &.is-active {
-      border-bottom-color: var(--primary);
-      color: var(--primary);
+      border-color: color-mix(in srgb, var(--primary) 45%, transparent);
+      background: var(--primary-container);
+      color: var(--on-primary-container);
     }
   }
 
+  // Saffron, like every count of things still waiting.
   &__count {
+    display: inline-grid;
+    place-items: center;
     min-width: 1.4rem;
+    height: 1.4rem;
     padding: 0 $space-1;
     border-radius: $radius-full;
-    background: var(--secondary-container);
-    color: var(--on-secondary-container);
+    background: var(--tertiary);
+    color: var(--on-tertiary);
     font-size: 0.75rem;
-    text-align: center;
+    font-weight: 700;
   }
+}
+
+// The trip's two moments use the dashboard's timeline; the state sits under the time.
+.shopping__timeline .timeline__badge {
+  align-self: flex-start;
+  margin-top: $space-1;
+}
+
+// A list's mark: the shop's colour as a disc, its icon on it.
+.shop-icon {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 1.6rem;
+  height: 1.6rem;
+  border-radius: 50%;
+  background: var(--surface-container-highest);
+  color: var(--on-surface);
+
+  &--title {
+    width: 1.9rem;
+    height: 1.9rem;
+    margin-right: $space-2;
+    vertical-align: -0.35rem;
+  }
+}
+
+// The current tab takes its shop's colour on its edge, where there is one.
+.list-tabs__tab.is-active {
+  border-color: var(--shop-color, color-mix(in srgb, var(--primary) 45%, transparent));
+}
+
+.list-counts__name {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-3;
 }

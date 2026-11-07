@@ -7,6 +7,9 @@
 // size to their tallest cell, so a day holding two dinners grows the whole
 // dinner row and every other day's dinner stays level with it. Seven per-day
 // flex stacks could not do that.
+//
+// Each day head and each cell is a card of its own, with the gap as the space
+// between them: a week of meals, not a table of them.
 
 .menu-grid {
   display: grid;
@@ -14,24 +17,13 @@
   // The header sizes to its content; every slot row is equal. 1fr rows in a grid
   // of indefinite height all resolve to the tallest, which keeps the rows even
   // even when one cell holds two entries.
-  grid-template-rows: auto repeat(var(--slot-count), minmax(5rem, 1fr));
-  gap: 1px;
-  background: var(--outline-variant);
-  border: 1px solid var(--outline-variant);
-  border-radius: $radius-md;
-  overflow: hidden;
-
-  // Every child paints its own background; the 1px gap shows through as the grid
-  // lines, which avoids a pile of per-cell borders.
-  > * {
-    background: var(--surface-container-lowest);
-  }
+  grid-template-rows: auto repeat(var(--slot-count), minmax(6.5rem, 1fr));
+  gap: $space-2;
 
   &__corner {
     display: flex;
-    align-items: center;
+    align-items: flex-end;
     padding: $space-1 $space-2;
-    background: var(--surface-container-low);
   }
 
   // The week range, in multi-week. Putting it here rather than in a heading above
@@ -42,66 +34,80 @@
     font-size: 0.7rem;
     font-weight: 650;
     line-height: 1.2;
-    text-transform: capitalize;
+    @include sentence-case;
   }
 
+  // The day: its name small and spaced, its number large in the display face.
+  // Today is filled, so it is the first thing the eye lands on.
   &__dayhead {
     display: flex;
-    align-items: baseline;
-    gap: $space-2;
-    padding: $space-2 $space-3;
+    flex-direction: column;
+    gap: $space-1;
+    padding: $space-3 $space-4;
+    border-radius: $radius-lg;
     background: var(--surface-container-low);
-    font-size: 0.8rem;
     color: var(--on-surface-variant);
-    text-transform: capitalize;
 
     &.is-today {
-      background: var(--primary-container);
-      color: var(--on-primary-container);
-      font-weight: 600;
+      background: var(--primary);
+      color: var(--on-primary);
     }
   }
 
+  &__dayname {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+  }
+
   &__daynum {
-    font-size: 1rem;
-    font-weight: 650;
+    color: var(--on-surface);
+    font-family: $font-display;
+    font-size: 1.8rem;
+    font-weight: 600;
+    line-height: 1;
     font-variant-numeric: tabular-nums;
   }
 
-  // The row label: a colour bar and plain text, rather than a pill. Four
-  // coloured capsules down the side of every week was decoration, not
-  // information.
+  &__dayhead.is-today &__daynum { color: inherit; }
+
+  // The row label: a small square of the slot's colour and its name.
   &__gutter {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: $space-2;
-    padding: $space-2 $space-3 $space-2 0;
-    background: var(--surface-container-low);
+    padding: $space-4 $space-3 0 0;
   }
 
   &__slotbar {
-    width: 3px;
-    align-self: stretch;
-    border-radius: 0 2px 2px 0;
+    flex: none;
+    width: 0.55rem;
+    height: 0.55rem;
+    margin-top: 0.3rem;
+    border-radius: 3px;
     background: var(--slot-accent);
   }
 
   &__slotname {
-    color: var(--on-surface-variant);
-    font-size: 0.78rem;
+    color: var(--on-surface);
+    font-size: 0.82rem;
     font-weight: 600;
     white-space: nowrap;
   }
 
   &__cell {
     position: relative;
-    // Even on all four sides. The extra left padding that used to be here was
-    // making room for the colour bar, which is hidden on a desktop -- so it just
-    // read as a lopsided cell. The phone breakpoint adds it back where the bar
-    // is actually drawn.
+    display: flex;
+    flex-direction: column;
     padding: $space-1;
+    border: 1px solid var(--outline-variant);
+    border-radius: $radius-lg;
+    background: var(--surface-container-low);
 
-    &.is-today { background: var(--surface-container-low); }
+    // Today's column is picked out by its edge, not by a fill: the fill is the
+    // day head's.
+    &.is-today { border-color: color-mix(in srgb, var(--primary) 45%, transparent); }
   }
 
   // The slot colour as a hairline inside the cell. Hidden on a desktop, where the
@@ -111,8 +117,8 @@
     display: none;
     position: absolute;
     left: 0;
-    top: 3px;
-    bottom: 3px;
+    top: $space-3;
+    bottom: $space-3;
     width: 3px;
     border-radius: 0 2px 2px 0;
     background: var(--slot-accent);
@@ -123,7 +129,7 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
-  height: 100%;
+  flex: 1 1 auto;
   position: relative;
 
   &--empty {
@@ -182,39 +188,49 @@
   // split the height between them.
   flex: 1 1 0;
   display: flex;
-  align-items: center;
-  gap: $space-1;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: $space-2;
   width: 100%;
   min-height: 0;
-  padding: $space-1 $space-2;
+  padding: $space-2 $space-3;
   border: 0;
-  border-radius: $radius-xs;
+  border-radius: $radius-md;
   background: transparent;
   color: var(--on-surface);
-  font-size: 0.88rem;
-  line-height: 1.3;
+  font-size: 0.95rem;
+  font-weight: 500;
+  line-height: 1.35;
   text-align: left;
 
-  &:hover { background: var(--surface-container); }
+  &:hover { background: var(--surface-container-high); }
 
   &__title {
-    flex: 1 1 auto;
     min-width: 0;
-    // Two lines, so one long title cannot push its row far taller than the rest.
+    // Three lines, so one long title cannot push its row far taller than the rest.
     display: -webkit-box;
-    -webkit-line-clamp: 2;
+    -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
 
-  // A dot, not the word "note": it says there is more without competing with the
-  // title for attention.
-  &__note {
-    flex: none;
-    width: 5px;
-    height: 5px;
-    border-radius: 50%;
-    background: var(--outline);
+  // What else the entry holds, said quietly under the title: a recipe, a link.
+  &__hints {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $space-1 $space-3;
+    color: var(--on-surface-variant);
+    font-size: 0.72rem;
+    font-weight: 500;
+  }
+
+  &__hint {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+
+    svg { flex: none; }
   }
 
   // A request is a proposal, not a decision.
@@ -226,38 +242,46 @@
   }
 }
 
-// Order deadline and delivery: a line across the day, inside the cell whose slot
-// the time falls in.
+// Order deadline and delivery: a pill at the top of the cell whose slot the
+// time falls in -- "Commander avant · 20:00" against dinner. Blue for the order,
+// green for the delivery, the same as everywhere else they appear.
 .day-marker {
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: -1px;
-  height: 0;
-  z-index: 1;
-  border-top: 2px dashed var(--marker-order);
   display: flex;
-  justify-content: flex-end;
+  margin: $space-1 $space-2 0;
   pointer-events: none;
 
-  &--delivery {
-    border-top-color: var(--marker-delivery);
-    border-top-style: solid;
-  }
-
   &__chip {
-    transform: translateY(-50%);
-    margin-right: $space-1;
-    padding: 0 4px;
-    border-radius: $radius-xs;
-    background: var(--marker-order);
-    color: #fff;
-    font-size: 0.58rem;
-    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: $space-2;
+    max-width: 100%;
+    padding: 2px $space-2;
+    border-radius: $radius-full;
+    background: color-mix(in srgb, var(--marker-order) 20%, transparent);
+    color: var(--on-surface);
+    font-size: 0.7rem;
+    font-weight: 600;
     font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+
+    // The rule the line used to be, kept as the pill's mark.
+    &::before {
+      content: "";
+      flex: none;
+      width: 0.6rem;
+      height: 2px;
+      border-radius: 1px;
+      background: var(--marker-order);
+    }
   }
 
-  &--delivery &__chip { background: var(--marker-delivery); }
+  &--delivery &__chip {
+    background: color-mix(in srgb, var(--marker-delivery) 20%, transparent);
+
+    &::before { background: var(--marker-delivery); }
+  }
 }
 
 // Drag feedback.
@@ -323,12 +347,26 @@ body.is-dragging {
   display: flex;
   align-items: center;
   gap: $space-2;
-  margin-bottom: $space-3;
+  margin-bottom: $space-5;
   flex-wrap: wrap;
 
+  // The week, as the page's title.
   &__range {
-    font-weight: 650;
-    text-transform: capitalize;
+    margin-left: $space-2;
+    font-family: $font-display;
+    font-size: 1.75rem;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+    @include sentence-case;
+
+    @media (max-width: $bp-tablet) { font-size: 1.3rem; }
+  }
+
+  // Said in place of a range where a list has no weeks.
+  &__note {
+    color: var(--on-surface-variant);
+    font-size: 0.9rem;
   }
 
   &__spacer { flex: 1 1 auto; }
@@ -338,12 +376,13 @@ body.is-dragging {
     align-items: center;
     gap: $space-2;
     min-height: 2.5rem;
-    padding: 0 $space-3;
+    padding: 0 $space-4;
     border: 1px solid var(--outline-variant);
     border-radius: $radius-full;
-    background: var(--surface-container-low);
+    background: transparent;
     color: var(--on-surface);
-    font-size: 0.85rem;
+    font-size: 0.88rem;
+    font-weight: 500;
 
     &:hover { background: var(--surface-container-high); }
 
@@ -355,12 +394,17 @@ body.is-dragging {
     }
   }
 
+  // Saffron: something is waiting on somebody.
   &__count {
-    padding: 0 $space-2;
+    display: inline-grid;
+    place-items: center;
+    min-width: 1.25rem;
+    height: 1.25rem;
+    padding: 0 $space-1;
     border-radius: $radius-full;
-    background: var(--tertiary-container);
-    color: var(--on-tertiary-container);
-    font-size: 0.7rem;
+    background: var(--tertiary);
+    color: var(--on-tertiary);
+    font-size: 0.72rem;
     font-weight: 700;
   }
 }
@@ -368,76 +412,176 @@ body.is-dragging {
 // Compact density, for multi-week. Only the row height and the type scale
 // change -- it is the same grid, so the slot alignment is untouched.
 .menu-grid--compact {
-  grid-template-rows: auto repeat(var(--slot-count), minmax(2.4rem, 1fr));
+  grid-template-rows: auto repeat(var(--slot-count), minmax(2.6rem, 1fr));
+  gap: 4px;
 
   .menu-grid__dayhead {
+    flex-direction: row;
+    align-items: baseline;
+    gap: $space-2;
     padding: $space-1 $space-2;
-    font-size: 0.7rem;
+    border-radius: $radius-sm;
   }
 
-  .menu-grid__daynum { font-size: 0.82rem; }
+  .menu-grid__dayname { font-size: 0.62rem; }
 
-  .menu-grid__gutter { padding: $space-1 $space-2 $space-1 0; }
+  .menu-grid__daynum { font-size: 0.95rem; }
 
-  .menu-grid__slotname { font-size: 0.68rem; }
+  .menu-grid__gutter { padding: $space-2 $space-2 0 0; }
 
-  .menu-grid__cell { padding: 2px; }
+  .menu-grid__slotname { font-size: 0.7rem; }
+
+  .menu-grid__cell {
+    padding: 2px;
+    border-radius: $radius-sm;
+  }
 
   .menu-entry {
-    padding: 2px $space-1;
-    font-size: 0.76rem;
+    padding: 2px $space-2;
+    border-radius: $radius-xs;
+    font-size: 0.78rem;
     line-height: 1.2;
   }
+
+  // No room for words under a title here; the details still open on a tap.
+  .menu-entry__hints { display: none; }
+
+  .day-marker { margin: 2px 2px 0; }
+  .day-marker__chip { padding: 0 $space-1; font-size: 0.6rem; }
 
   .menu-cell--empty { min-height: 1.6rem; font-size: 0.8rem; }
 }
 
-// Phone: one day at a time, swiped.
-//
-// The grid has to be WIDER than its scroller or there is nothing to scroll, which
-// is exactly what left the first attempt stuck on Monday: percentage columns size
-// themselves to the container, so seven days always "fitted" and the overflow
-// never engaged. Fixed column widths plus max-content make the grid genuinely
-// overflow, and the scroller can then do its job.
+// Phone: a list of day cards rather than the grid. A sideways strip of 80vw
+// columns kept six days of seven off screen; a list shows the week by
+// scrolling the page the ordinary way. The grid stays in the DOM (hidden), so
+// a resize between the two needs nothing but CSS.
+.menu-days { display: none; }
+
 @media (max-width: $bp-tablet) {
-  .menu-grid-scroll {
-    overflow-x: auto;
-    overscroll-behavior-x: contain;
-    scroll-snap-type: x mandatory;
-    -webkit-overflow-scrolling: touch;
-    margin: 0 (-$space-3);
-    padding: 0 $space-3;
+  .menu-grid { display: none; }
+
+  .menu-days {
+    display: grid;
+    gap: $space-3;
   }
 
-  .menu-grid {
-    width: max-content;
-    // No gutter column: the labels go, and each cell carries the slot's colour as
-    // a bar instead. Readable day columns matter more on a phone than repeating
-    // four meal names down the side.
-    grid-template-columns: repeat(var(--day-count), 80vw);
-    grid-template-rows: auto repeat(var(--slot-count), minmax(4rem, 1fr));
+  .menu-days__label {
+    margin: $space-2 0 0;
+    color: var(--on-surface-variant);
+    font-size: 0.78rem;
+    font-weight: 650;
+    @include sentence-case;
+  }
+}
+
+.menu-day {
+  padding: $space-3 $space-3 $space-2;
+  border: 1px solid var(--outline-variant);
+  border-radius: $radius-lg;
+  background: var(--surface-container-low);
+  // Opening the week scrolls today to the top; it must land under the
+  // sticky header, not behind it.
+  scroll-margin-top: calc(var(--header-height) + #{$space-3});
+
+  &.is-today { border-color: color-mix(in srgb, var(--primary) 55%, transparent); }
+
+  &__head {
+    display: flex;
+    align-items: baseline;
+    gap: $space-2;
+    padding: 0 $space-1 $space-2;
   }
 
-  .menu-grid__corner,
-  .menu-grid__gutter {
-    display: none;
+  &__name {
+    font-family: $font-display;
+    font-size: 1.15rem;
+    font-weight: 600;
+    @include sentence-case;
   }
 
-  .menu-grid__cellbar { display: block; }
-
-  // Room for the bar, only where the bar exists.
-  .menu-grid__cell { padding-left: $space-2; }
-
-  .menu-grid__dayhead,
-  .menu-grid__cell {
-    scroll-snap-align: start;
+  &__num {
+    color: var(--on-surface-variant);
+    font-family: $font-display;
+    font-size: 1.15rem;
+    font-weight: 600;
   }
 
-  .menu-grid__dayhead {
-    position: sticky;
-    top: 0;
-    z-index: 2;
+  &__today {
+    margin-left: auto;
+    padding: 2px $space-2;
+    border-radius: $radius-full;
+    background: var(--primary);
+    color: var(--on-primary);
+    font-size: 0.7rem;
+    font-weight: 700;
   }
+
+  // One slot: its name on the left, its meal (or the add target) on the right.
+  &__slot {
+    display: grid;
+    grid-template-columns: 5.5rem minmax(0, 1fr);
+    align-items: center;
+    gap: $space-2;
+    min-height: 3rem;
+    border-top: 1px solid var(--outline-variant);
+
+    &.is-over {
+      border-radius: $radius-sm;
+      outline: 2px solid var(--primary);
+      outline-offset: -2px;
+      background: var(--primary-container);
+    }
+  }
+
+  &__slotname {
+    display: inline-flex;
+    align-items: center;
+    gap: $space-2;
+    padding-left: $space-1;
+    color: var(--on-surface-variant);
+    font-size: 0.8rem;
+    font-weight: 600;
+
+    .menu-grid__slotbar { margin-top: 0; }
+  }
+
+  &__body {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    padding: $space-1 0;
+
+    .menu-grid__cellbar { display: none; }
+
+    .day-marker { margin: 0 0 $space-1; }
+
+    .menu-entry {
+      flex-direction: row;
+      align-items: center;
+      padding: $space-2;
+    }
+
+    .menu-entry__hints { flex: none; margin-left: auto; }
+
+    .menu-cell--blank { min-height: 1.5rem; }
+
+    .menu-cell--empty {
+      justify-items: start;
+      min-height: 2.5rem;
+      padding-left: $space-2;
+      opacity: 0.6;
+    }
+  }
+}
+
+// The phone list in multi-week: the same cards, tighter.
+.menu-days--compact {
+  gap: $space-2;
+
+  .menu-day__slot { min-height: 2.5rem; }
+
+  .menu-entry { padding: $space-1 $space-2; font-size: 0.88rem; }
 }
 
 body.is-copying {
@@ -482,9 +626,18 @@ body.is-dragging-request {
 
 // The edit-mode switch. Off is a quiet outline like any other button; on is
 // loud on purpose, because a menu that changes when you tap it should look it.
-.week-bar__mode.is-on {
-  background: var(--primary);
-  color: var(--on-primary);
+.week-bar__mode {
+  border-color: transparent;
+  background: var(--primary-container);
+  color: var(--on-primary-container);
+  font-weight: 600;
+
+  &:hover { background: var(--primary-container); filter: brightness(1.15); }
+
+  &.is-on {
+    background: var(--primary);
+    color: var(--on-primary);
+  }
 }
 
 // An empty cell in reading mode: holds the row height, offers nothing.
