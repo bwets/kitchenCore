@@ -104,8 +104,10 @@
     flex: none;
   }
 
-  // Shrinks before anything else does, and scrolls inside itself.
-  &__notes {
+  // Shrinks before anything else does, and scrolls inside itself. Written as
+  // .field.entry-body__notes: the element is also a .field, whose
+  // `display: block` comes later in this file and would otherwise win the tie.
+  .field#{&}__notes {
     display: flex;
     flex: 1 1 auto;
     flex-direction: column;
